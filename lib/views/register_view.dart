@@ -167,24 +167,29 @@ class RegisterView extends StatelessWidget {
               const SizedBox(height: 17),
 
               Center(
-                child: RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade600,
-                    ),
-                    children: const[
-                      TextSpan(
-                        text: 'Already have an account? ',
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600
                       ),
-                      TextSpan(
-                        text: 'Login',
-                        style: TextStyle(
-                          color: Color(0xFF4B4BD8),
-                          fontWeight: FontWeight.w600,
+                      children: const[
+                        TextSpan(
+                          text: 'Already have an account? ',
                         ),
-                      )
-                    ]
+                        TextSpan(
+                          text: 'Login',
+                          style: TextStyle(
+                            color: Color(0xFF4B4BD8),
+                            fontWeight: FontWeight.w600,
+                          )
+                        )
+                      ]
+                    ),
                   ),
                 ),
               ),
