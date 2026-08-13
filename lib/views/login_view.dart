@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ziesocial/views/register_view.dart';
+import 'home_view.dart';
 
 class LoginView extends StatelessWidget {
   const LoginView({super.key});
@@ -167,7 +168,14 @@ class LoginView extends StatelessWidget {
                     width: double.infinity,
                     height: 38,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context, 
+                          MaterialPageRoute(
+                            builder: (context) => const HomeView(), 
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4B4BD8),
                         foregroundColor: Colors.white,
