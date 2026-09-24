@@ -1,12 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; //[cite: 1]
+import 'package:ziesocial/viewmodel/login_viewmodel.dart';
 import 'package:ziesocial/views/register_view.dart';
 import 'home_view.dart';
+// Sesuaikan import di bawah ini sesuai lokasi LoginViewModel di project Anda
+// import 'package:ziesocial/viewmodel/login_viewmodel.dart'; 
 
-class LoginView extends StatelessWidget {
+class LoginView extends StatefulWidget { //[cite: 1]
   const LoginView({super.key});
 
   @override
+  State<LoginView> createState() => _LoginViewState(); //[cite: 1]
+}
+
+class _LoginViewState extends State<LoginView> {
+  final _emailController = TextEditingController(); //[cite: 1]
+  final _passwordController = TextEditingController(); //[cite: 1]
+
+  @override
+  void dispose() {
+    _emailController.dispose(); //[cite: 1]
+    _passwordController.dispose(); //[cite: 1]
+    super.dispose(); //[cite: 1]
+  }
+
+  Future<void> _login() async { //[cite: 1]
+    final email = _emailController.text.trim(); //[cite: 1]
+    final password = _passwordController.text; //[cite: 1]
+
+    if (email.isEmpty || password.isEmpty) { //[cite: 1]
+      ScaffoldMessenger.of(context).showSnackBar( //[cite: 1]
+        const SnackBar(
+          content: Text('Email dan password wajib diisi.'), //[cite: 1]
+        ),
+      );
+      return; //[cite: 1]
+    }
+
+    // Memanggil LoginViewModel via Provider[cite: 1]
+    final success = await context.read<LoginViewModel>().login(
+          email: email,
+          password: password,
+        ); //[cite: 1]
+
+    if (!mounted) return; //[cite: 1]
+
+    if (success) { //[cite: 1]
+      Navigator.pushReplacement( //[cite: 1]
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeView(), //[cite: 1]
+        ),
+      );
+    } else {
+      final errorMessage = context.read<LoginViewModel>().errorMessage; //[cite: 1]
+      ScaffoldMessenger.of(context).showSnackBar( //[cite: 1]
+        SnackBar(
+          content: Text(errorMessage ?? 'Login gagal.'), //[cite: 1]
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Memantau status loading dari LoginViewModel[cite: 1]
+    final isLoading = context.watch<LoginViewModel>().isLoading; //[cite: 1]
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
@@ -65,6 +125,8 @@ class LoginView extends StatelessWidget {
                   const SizedBox(height: 5),
 
                   TextField(
+                    controller: _emailController, // Menambahkan controller[cite: 1]
+                    keyboardType: TextInputType.emailAddress, // Menambahkan tipe input[cite: 1]
                     decoration: InputDecoration(
                       hintText: 'Enter Your Email',
                       hintStyle: TextStyle(
@@ -84,7 +146,7 @@ class LoginView extends StatelessWidget {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
                         borderSide: BorderSide(
-                          color: Colors.grey.shade300
+                          color: Colors.grey.shade300,
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
@@ -111,8 +173,9 @@ class LoginView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  
+
                   TextField(
+                    controller: _passwordController, // Menambahkan controller[cite: 1]
                     obscureText: true,
                     decoration: InputDecoration(
                       hintText: '••••••••',
@@ -121,13 +184,13 @@ class LoginView extends StatelessWidget {
                         color: Colors.grey.shade400,
                       ),
                       prefixIcon: Icon(
-                        Icons.visibility_outlined,
+                        Icons.lock_outline, // Mengganti ikon agar lebih sesuai
                         size: 16,
                         color: Colors.grey.shade600,
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF4F4F6),
-                      contentPadding:  const EdgeInsets.symmetric(
+                      contentPadding: const EdgeInsets.symmetric(
                         vertical: 12,
                       ),
                       border: OutlineInputBorder(
@@ -168,14 +231,8 @@ class LoginView extends StatelessWidget {
                     width: double.infinity,
                     height: 38,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context, 
-                          MaterialPageRoute(
-                            builder: (context) => const HomeView(), 
-                          ),
-                        );
-                      },
+                      // Memanggil fungsi _login dan menampilkan indikator saat loading[cite: 1]
+                      onPressed: isLoading ? null : _login, 
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4B4BD8),
                         foregroundColor: Colors.white,
@@ -184,13 +241,22 @@ class LoginView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
-                      child: const Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Login',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -205,7 +271,7 @@ class LoginView extends StatelessWidget {
                     child: GestureDetector(
                       onTap: () {
                         Navigator.push(
-                          context, 
+                          context,
                           MaterialPageRoute(
                             builder: (context) => const RegisterView(),
                           ),
@@ -217,7 +283,7 @@ class LoginView extends StatelessWidget {
                             fontSize: 10,
                             color: Colors.grey.shade600,
                           ),
-                          children: const[
+                          children: const [
                             TextSpan(
                               text: "Don't have an account? ",
                             ),
