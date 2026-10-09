@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:ziesocial/viewmodel/login_viewmodel.dart';
+import 'package:ziesocial/views/create_post_view.dart';
+import 'package:ziesocial/views/login_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
+
+  void _logout(BuildContext context) {
+    context.read<LoginViewModel>().logout();
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const LoginView(),
+      ),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,11 +27,23 @@ class HomeView extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {
-
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreatePostView(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.add),
+            tooltip: 'Buat postingan',
+          ),
+          IconButton(
+            onPressed: () {
+              _logout(context);
             },
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
-            )
+          ),
         ],
       ),
       body: Padding(

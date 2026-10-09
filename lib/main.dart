@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; //
+import 'package:ziesocial/viewmodel/create_post_viewmodel.dart';
 import 'package:ziesocial/viewmodel/register_viewmodel.dart';
 
 // Sesuaikan import di bawah ini dengan struktur folder project Anda
@@ -19,6 +20,9 @@ void main() {
         // Cukup tulis 1 kali saja di sini:
         ChangeNotifierProvider(
           create: (_) => RegisterViewmodel(apiClient), // atau RegisterViewModel() jika tidak butuh apiClient
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CreatePostViewModel(apiClient),
         ),
       ],
       child: const ZieSocialApp(),
