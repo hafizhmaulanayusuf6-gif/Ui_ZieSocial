@@ -6,9 +6,23 @@ import 'package:ziesocial/viewmodel/register_viewmodel.dart';
 // Sesuaikan import di bawah ini dengan struktur folder project Anda
 import 'core/network.dart'; // atau lokasi ApiClient Anda
 import 'viewmodel/login_viewmodel.dart'; // atau lokasi LoginViewModel Anda
-import 'views/login_view.dart'; //[cite: 2]
+import 'views/login_view.dart';
+import 'package:ziesocial/viewmodel/post_viewmodel.dart';
+ //[cite: 2]
+
+import 'dart:io';
+
+// Tambahkan kelas ini di atas atau di file main.dart
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
+}
 
 void main() {
+  HttpOverrides.global = MyHttpOverrides();
   final apiClient = ApiClient();
 
   runApp(
@@ -23,6 +37,9 @@ void main() {
         ),
         ChangeNotifierProvider(
           create: (_) => CreatePostViewModel(apiClient),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => PostViewModel(apiClient)
         ),
       ],
       child: const ZieSocialApp(),

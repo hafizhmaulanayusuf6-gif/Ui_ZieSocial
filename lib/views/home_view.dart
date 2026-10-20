@@ -4,17 +4,36 @@ import 'package:ziesocial/viewmodel/login_viewmodel.dart';
 import 'package:ziesocial/views/create_post_view.dart';
 import 'package:ziesocial/views/login_view.dart';
 
+import 'package:ziesocial/model/post_model.dart';
+import 'package:ziesocial/viewmodel/post_viewmodel.dart';
+
 const _primaryColor = Color(0xFF4F46E5);
 const _pageColor = Color(0xFFF8F9FC);
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
-  void _openCreatePost(BuildContext context) {
-    Navigator.push(
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<PostViewModel>().fetchPosts();
+    });
+  }
+
+  Future<void> _openCreatePost(BuildContext context) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const CreatePostView()),
     );
+
+    if (!mounted) return;
+    await context.read<PostViewModel>().fetchPosts();
   }
 
   void _logout(BuildContext context) {
@@ -41,12 +60,59 @@ class HomeView extends StatelessWidget {
                 onCreatePost: () => _openCreatePost(context),
               ),
             ),
-            // Feed menggunakan mock data untuk membentuk UI referensi.
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => PostCard(post: _mockPosts[index]),
-                childCount: _mockPosts.length,
-              ),
+            Consumer<PostViewModel>(
+              builder: (context, viewModel, child) {
+                if (viewModel.isLoading && viewModel.posts.isEmpty) {
+                  return const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                }
+
+                if (viewModel.errorMessage != null && viewModel.posts.isEmpty) {
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          const Text('Postingan gagal dimuat.'),
+                          const SizedBox(height: 8),
+                          Text(
+                            viewModel.errorMessage!,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: viewModel.fetchPosts,
+                            child: const Text('Coba Lagi'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                if (viewModel.posts.isEmpty) {
+                  return const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: Text('Belum ada postingan.')),
+                    ),
+                  );
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => PostCard(
+                      key: ValueKey(viewModel.posts[index].id),
+                      post: viewModel.posts[index],
+                    ),
+                    childCount: viewModel.posts.length,
+                  ),
+                );
+              },
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 88)),
           ],
@@ -255,7 +321,7 @@ class _StoryItem extends StatelessWidget {
 }
 
 class PostCard extends StatefulWidget {
-  final PostData post;
+  final PostModel post;
 
   const PostCard({super.key, required this.post});
 
@@ -282,7 +348,13 @@ class _PostCardState extends State<PostCard> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundImage: NetworkImage(post.avatarUrl),
+                  backgroundColor: const Color(0xFFE9EDF5),
+                  backgroundImage: post.avatarUrl.isNotEmpty
+                      ? NetworkImage(post.avatarUrl)
+                      : null,
+                  child: post.avatarUrl.isEmpty
+                      ? const Icon(Icons.person, size: 18)
+                      : null,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -317,23 +389,35 @@ class _PostCardState extends State<PostCard> {
           ),
           AspectRatio(
             aspectRatio: 1,
-            child: Image.network(
-              post.imageUrl,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return const Center(
-                  child: CircularProgressIndicator(color: _primaryColor),
-                );
-              },
-              errorBuilder: (_, __, ___) => Container(
-                color: const Color(0xFFE9EDF5),
-                child: const Center(
-                  child: Icon(Icons.image_not_supported_outlined, size: 42),
-                ),
-              ),
-            ),
+            child: post.imageUrl.isEmpty
+                ? const ColoredBox(
+                    color: Color(0xFFE9EDF5),
+                    child: Center(
+                      child: Icon(Icons.image_not_supported_outlined, size: 42),
+                    ),
+                  )
+                : Image.network(
+                    post.imageUrl,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: _primaryColor,
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => Container(
+                      color: const Color(0xFFE9EDF5),
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 7, 16, 0),
@@ -364,7 +448,7 @@ class _PostCardState extends State<PostCard> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 5, 16, 0),
             child: Text(
-              '${post.likes + (_liked ? 1 : 0)} likes • ${post.comments} comments',
+              '${post.likesCount + (_liked ? 1 : 0)} likes • ${post.commentsCount} comments',
               style: const TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
@@ -391,11 +475,14 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Text(
-              '2 HOURS AGO',
-              style: TextStyle(fontSize: 9, color: Color(0xFF8A8E98)),
+              post.createdAt.isEmpty ? '' : post.createdAt,
+              style: const TextStyle(
+                fontSize: 9,
+                color: Color(0xFF8A8E98),
+              ),
             ),
           ),
         ],
@@ -470,26 +557,6 @@ class StoryData {
   const StoryData({required this.username, required this.avatarUrl});
 }
 
-class PostData {
-  final String username;
-  final String location;
-  final String avatarUrl;
-  final String imageUrl;
-  final int likes;
-  final int comments;
-  final String caption;
-
-  const PostData({
-    required this.username,
-    required this.location,
-    required this.avatarUrl,
-    required this.imageUrl,
-    required this.likes,
-    required this.comments,
-    required this.caption,
-  });
-}
-
 // Data contoh dipisahkan dari widget agar mudah diganti dengan data API nanti.
 const List<StoryData> _mockStories = [
   StoryData(
@@ -511,18 +578,5 @@ const List<StoryData> _mockStories = [
   StoryData(
     username: 'nina.jpg',
     avatarUrl: 'https://i.pravatar.cc/120?img=44',
-  ),
-];
-
-const List<PostData> _mockPosts = [
-  PostData(
-    username: 'wander.lust',
-    location: 'Bali, Indonesia',
-    avatarUrl: 'https://i.pravatar.cc/120?img=32',
-    imageUrl:
-        'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?auto=format&fit=crop&w=1000&q=85',
-    likes: 125,
-    comments: 12,
-    caption: 'Exploring paradise in Bali! 🌴✨ #travel #wanderlust',
   ),
 ];

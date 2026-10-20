@@ -6,4 +6,5 @@ class ApiConstants {
   static String get login => '$baseUrl/auth/login.php';
   static String get register => '$baseUrl/auth/register.php';
   static String createPost = '$baseUrl/posts/create.php';
+  static String get posts => '$baseUrl/posts/read.php';
 }
