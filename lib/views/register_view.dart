@@ -37,27 +37,29 @@ class _RegisterViewState extends State<RegisterView> {
 
     // Validasi kosong
     if (name.isEmpty || username.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Semua field wajib diisi.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Semua field wajib diisi.')));
       return;
     }
 
     // Validasi kecocokan password
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password dan Confirm Password tidak cocok.')),
+        const SnackBar(
+          content: Text('Password dan Confirm Password tidak cocok.'),
+        ),
       );
       return;
     }
 
     // Panggil fungsi register di ViewModel
     final success = await context.read<RegisterViewmodel>().register(
-          name: name,
-          username: username,
-          email: email,
-          password: password,
-        );
+      name: name,
+      username: username,
+      email: email,
+      password: password,
+    );
 
     if (!mounted) return;
 
@@ -89,11 +91,15 @@ class _RegisterViewState extends State<RegisterView> {
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF4B4BD8), size: 20),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFF4B4BD8),
+                  size: 20,
+                ),
               ),
               const SizedBox(height: 55),
+
               // ... (Bagian Text Header dan Upload Photo biarkan sama seperti sebelumnya) ...
-              
               _buildLabel('Full Name'),
               const SizedBox(height: 5),
               _buildTextField(
@@ -203,27 +209,32 @@ class _RegisterViewState extends State<RegisterView> {
       obscureText: obscureText,
       style: const TextStyle(fontSize: 10),
       decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-          prefixIcon: Icon(icon, size: 17, color: Colors.grey.shade600),
-          suffixIcon: showPasswordIcon
-              ? Icon(Icons.visibility_off_outlined, size: 17, color: Colors.grey.shade500)
-              : null,
-          filled: true,
-          fillColor: const Color(0xFFF4F4F6),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: Color(0xFF4B4BD8)),
-          )),
+        hintText: hintText,
+        hintStyle: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+        prefixIcon: Icon(icon, size: 17, color: Colors.grey.shade600),
+        suffixIcon: showPasswordIcon
+            ? Icon(
+                Icons.visibility_off_outlined,
+                size: 17,
+                color: Colors.grey.shade500,
+              )
+            : null,
+        filled: true,
+        fillColor: const Color(0xFFF4F4F6),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFF4B4BD8)),
+        ),
+      ),
     );
   }
 }

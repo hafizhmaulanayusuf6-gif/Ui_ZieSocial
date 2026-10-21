@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:ziesocial/core/constants.dart';
 import 'package:ziesocial/core/network.dart';
 
-class RegisterViewmodel extends ChangeNotifier{
+class RegisterViewmodel extends ChangeNotifier {
   final ApiClient _apiClient;
 
   RegisterViewmodel(this._apiClient);
@@ -24,7 +24,6 @@ class RegisterViewmodel extends ChangeNotifier{
     notifyListeners();
 
     try {
-
       await _apiClient.post(
         ApiConstants.register,
         body: {
@@ -36,7 +35,7 @@ class RegisterViewmodel extends ChangeNotifier{
       );
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '',);
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
       return false;
     } finally {
       _isLoading = false;
@@ -44,4 +43,3 @@ class RegisterViewmodel extends ChangeNotifier{
     }
   }
 }
-

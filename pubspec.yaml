@@ -34,6 +34,7 @@ dependencies:
   gap: ^3.0.1
   http: ^1.6.0
   image_picker: ^1.2.3
+  lottie: ^3.3.3
   provider: ^6.1.5+1
 
 dev_dependencies:
@@ -62,6 +63,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/images/
+    - assets/animations/Like.json
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

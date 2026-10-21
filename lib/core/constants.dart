@@ -1,10 +1,10 @@
 class ApiConstants {
-  static String get baseUrl {
-    return 'https://unpitted-alana-overwarmed.ngrok-free.dev/ziesocial/api';
-  }
-
+  static const String serverRoot =
+    'https://unpitted-alana-overwarmed.ngrok-free.dev/ziesocial';
+  
+  static String get baseUrl => '$serverRoot/api';
   static String get login => '$baseUrl/auth/login.php';
   static String get register => '$baseUrl/auth/register.php';
-  static String createPost = '$baseUrl/posts/create.php';
+  static String get createPost => '$baseUrl/posts/create.php';
   static String get posts => '$baseUrl/posts/read.php';
 }

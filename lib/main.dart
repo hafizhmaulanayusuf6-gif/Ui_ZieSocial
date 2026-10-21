@@ -8,16 +8,17 @@ import 'core/network.dart'; // atau lokasi ApiClient Anda
 import 'viewmodel/login_viewmodel.dart'; // atau lokasi LoginViewModel Anda
 import 'views/login_view.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
- //[cite: 2]
+//[cite: 2]
 
 import 'dart:io';
 
-// Tambahkan kelas ini di atas atau di file main.dart
+// untuk sertifikat di hp saya
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
   }
 }
 
@@ -28,19 +29,15 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => LoginViewModel(apiClient),
-        ),
+        ChangeNotifierProvider(create: (_) => LoginViewModel(apiClient)),
         // Cukup tulis 1 kali saja di sini:
         ChangeNotifierProvider(
-          create: (_) => RegisterViewmodel(apiClient), // atau RegisterViewModel() jika tidak butuh apiClient
+          create: (_) => RegisterViewmodel(
+            apiClient,
+          ), // atau RegisterViewModel() jika tidak butuh apiClient
         ),
-        ChangeNotifierProvider(
-          create: (_) => CreatePostViewModel(apiClient),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => PostViewModel(apiClient)
-        ),
+        ChangeNotifierProvider(create: (_) => CreatePostViewModel(apiClient)),
+        ChangeNotifierProvider(create: (_) => PostViewModel(apiClient)),
       ],
       child: const ZieSocialApp(),
     ),
@@ -56,7 +53,9 @@ class ZieSocialApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'ZieSocial',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), //[cite: 2]
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+        ), //[cite: 2]
       ),
       home: const LoginView(), //[cite: 2]
     );

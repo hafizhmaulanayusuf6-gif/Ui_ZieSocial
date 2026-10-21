@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:ziesocial/core/constants.dart';
 import 'package:ziesocial/core/network.dart';
@@ -24,24 +23,20 @@ class PostViewModel extends ChangeNotifier {
 
     try {
       final response = await _apiClient.get(ApiConstants.posts);
-      final rawPosts = response['posts'];
+      final rawPosts = response['data'];
 
       if (rawPosts is! List) {
         throw const FormatException(
-          'Format respons API tidak memiliki daftar posts.',
+          'Respons API tidak memiliki daftar data postingan.',
         );
       }
 
       _posts = rawPosts.map((item) {
         if (item is! Map) {
-          throw const FormatException(
-            'Data postingan dari API tidak valid.',
-          );
+          throw const FormatException('Format data postingan tidak valid.');
         }
 
-        return PostModel.fromJson(
-          Map<String, dynamic>.from(item),
-        );
+        return PostModel.fromJson(Map<String, dynamic>.from(item));
       }).toList();
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');

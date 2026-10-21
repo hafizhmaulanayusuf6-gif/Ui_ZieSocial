@@ -7,6 +7,8 @@ import 'package:ziesocial/views/login_view.dart';
 import 'package:ziesocial/model/post_model.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
 
+import 'package:lottie/lottie.dart';
+
 const _primaryColor = Color(0xFF4F46E5);
 const _pageColor = Color(0xFFF8F9FC);
 
@@ -228,8 +230,9 @@ class _YourStory extends StatelessWidget {
                   ),
                   child: const CircleAvatar(
                     radius: 23,
-                    backgroundImage:
-                        NetworkImage('https://i.pravatar.cc/120?img=12'),
+                    backgroundImage: NetworkImage(
+                      'https://i.pravatar.cc/120?img=12',
+                    ),
                   ),
                 ),
                 Positioned(
@@ -282,11 +285,7 @@ class _StoryItem extends StatelessWidget {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [
-                  _primaryColor,
-                  Color(0xFF9B5DE5),
-                  Color(0xFFFFA45B),
-                ],
+                colors: [_primaryColor, Color(0xFF9B5DE5), Color(0xFFFFA45B)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -332,6 +331,22 @@ class PostCard extends StatefulWidget {
 class _PostCardState extends State<PostCard> {
   bool _liked = false;
   bool _saved = false;
+  bool _showLikeAnimation = false;
+
+  void _likeWithAnimation() {
+    setState(() {
+      _liked = true;
+      _showLikeAnimation = true;
+    });
+
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (!mounted) return;
+
+      setState(() {
+        _showLikeAnimation = false;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -387,54 +402,75 @@ class _PostCardState extends State<PostCard> {
               ],
             ),
           ),
+
           AspectRatio(
             aspectRatio: 1,
-            child: post.imageUrl.isEmpty
-                ? const ColoredBox(
-                    color: Color(0xFFE9EDF5),
-                    child: Center(
-                      child: Icon(Icons.image_not_supported_outlined, size: 42),
-                    ),
-                  )
-                : Image.network(
-                    post.imageUrl,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: _primaryColor,
-                        ),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => Container(
-                      color: const Color(0xFFE9EDF5),
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported_outlined,
-                          size: 42,
-                        ),
-                      ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    onDoubleTap: _likeWithAnimation,
+                    child: post.imageUrl.isEmpty
+                        ? const ColoredBox(
+                            color: Color(0xFFE9EDF5),
+                            child: Center(
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 42,
+                              ),
+                            ),
+                          )
+                        : Image.network(
+                            post.imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: _primaryColor,
+                                ),
+                              );
+                            },
+                            errorBuilder: (_, __, ___) => const ColoredBox(
+                              color: Color(0xFFE9EDF5),
+                              child: Center(
+                                child: Icon(
+                                  Icons.image_not_supported_outlined,
+                                  size: 42,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+
+                if (_showLikeAnimation)
+                  IgnorePointer(
+                    child: Lottie.asset(
+                      'assets/animations/Like.json',
+                      width: 200,
+                      height: 200,
+                      repeat: false,
                     ),
                   ),
+              ],
+            ),
           ),
+
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 7, 16, 0),
             child: Row(
               children: [
                 _ActionIcon(
                   icon: _liked ? Icons.favorite : Icons.favorite_border,
-                  color: _liked
-                      ? Colors.redAccent
-                      : const Color(0xFF424650),
+                  color: _liked ? Colors.redAccent : const Color(0xFF424650),
                   onTap: () => setState(() => _liked = !_liked),
                 ),
                 const SizedBox(width: 15),
-                _ActionIcon(
-                  icon: Icons.mode_comment_outlined,
-                  onTap: () {},
-                ),
+                _ActionIcon(icon: Icons.mode_comment_outlined, onTap: () {}),
                 const SizedBox(width: 15),
                 _ActionIcon(icon: Icons.send_outlined, onTap: () {}),
                 const Spacer(),
@@ -479,10 +515,7 @@ class _PostCardState extends State<PostCard> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Text(
               post.createdAt.isEmpty ? '' : post.createdAt,
-              style: const TextStyle(
-                fontSize: 9,
-                color: Color(0xFF8A8E98),
-              ),
+              style: const TextStyle(fontSize: 9, color: Color(0xFF8A8E98)),
             ),
           ),
         ],
@@ -559,22 +592,13 @@ class StoryData {
 
 // Data contoh dipisahkan dari widget agar mudah diganti dengan data API nanti.
 const List<StoryData> _mockStories = [
-  StoryData(
-    username: 'sarah.j',
-    avatarUrl: 'https://i.pravatar.cc/120?img=47',
-  ),
+  StoryData(username: 'sarah.j', avatarUrl: 'https://i.pravatar.cc/120?img=47'),
   StoryData(
     username: 'mike_dev',
     avatarUrl: 'https://i.pravatar.cc/120?img=12',
   ),
-  StoryData(
-    username: 'art.flow',
-    avatarUrl: 'https://i.pravatar.cc/120?img=5',
-  ),
-  StoryData(
-    username: 'doggo',
-    avatarUrl: 'https://i.pravatar.cc/120?img=11',
-  ),
+  StoryData(username: 'art.flow', avatarUrl: 'https://i.pravatar.cc/120?img=5'),
+  StoryData(username: 'doggo', avatarUrl: 'https://i.pravatar.cc/120?img=11'),
   StoryData(
     username: 'nina.jpg',
     avatarUrl: 'https://i.pravatar.cc/120?img=44',
