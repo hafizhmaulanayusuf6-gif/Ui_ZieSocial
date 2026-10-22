@@ -142,4 +142,14 @@ class PostViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  void updateCommentCount({required int postId, required int delta}) {
+    final index = _posts.indexWhere((post) => post.id == postId);
+    if (index == -1) return;
+
+    final currentCount = _posts[index].commentsCount;
+    final newCount = (currentCount + delta) < 0 ? 0 : currentCount + delta;
+    _posts[index] = _posts[index].copyWith(commentsCount: newCount);
+    notifyListeners();
+  }
 }

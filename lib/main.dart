@@ -7,6 +7,7 @@ import 'package:ziesocial/viewmodel/register_viewmodel.dart';
 import 'core/network.dart'; // atau lokasi ApiClient Anda
 import 'viewmodel/login_viewmodel.dart'; // atau lokasi LoginViewModel Anda
 import 'views/login_view.dart';
+import 'package:ziesocial/viewmodel/comment_viewmodel.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
 //[cite: 2]
 
@@ -38,6 +39,7 @@ void main() {
         ),
         ChangeNotifierProvider(create: (_) => CreatePostViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => PostViewModel(apiClient)),
+        ChangeNotifierProvider(create: (_) => CommentViewModel(apiClient)),
       ],
       child: const ZieSocialApp(),
     ),
