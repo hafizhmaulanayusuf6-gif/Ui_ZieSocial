@@ -9,4 +9,6 @@ class ApiConstants {
   static String get posts => '$baseUrl/posts/read.php';
   static String get like => '$baseUrl/posts/like.php';
   static String get unlike => '$baseUrl/posts/unlike.php';
+  static String get updatePost => '$baseUrl/posts/update.php';
+  static String get deletePost => '$baseUrl/posts/delete.php';
 }

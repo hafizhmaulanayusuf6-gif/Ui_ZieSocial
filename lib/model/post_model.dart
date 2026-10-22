@@ -34,70 +34,53 @@ class PostModel {
 
     return PostModel(
       id: int.tryParse('${json['id'] ?? 0}') ?? 0,
-
       userId: int.tryParse('${author['id'] ?? json['user_id'] ?? 0}') ?? 0,
-
-      username:
-          author['username']?.toString() ??
-          json['username']?.toString() ??
-          'Pengguna',
-
-      avatarUrl:
-          author['avatar']?.toString() ?? json['avatar_url']?.toString() ?? '',
-
-      imageUrl: resolveImageUrl(json['image']?.toString() ?? ''),
-
-      caption: json['caption']?.toString() ?? '',
-
-      likesCount:
-          int.tryParse('${json['like_count'] ?? json['likes_count'] ?? 0}') ??
-          0,
-
-      commentsCount:
-          int.tryParse(
-            '${json['comment_count'] ?? json['coment_count'] ?? 0}',
-          ) ??
-          0,
-
-      createdAt:
-          json['create_date']?.toString() ??
-          json['created_at']?.toString() ??
-          '',
-
-      location: json['location']?.toString() ?? '',
-
+      username: (author['username'] ?? json['username'] ?? 'Pengguna')
+          .toString(),
+      avatarUrl: resolveImageUrl(
+        (author['avatar'] ?? json['avatar_url'] ?? '').toString(),
+      ),
+      imageUrl: resolveImageUrl((json['image'] ?? '').toString()),
+      caption: (json['caption'] ?? '').toString(),
+      likesCount: int.tryParse('${json['like_count'] ?? 0}') ?? 0,
+      commentsCount: int.tryParse('${json['comment_count'] ?? 0}') ?? 0,
+      createdAt: (json['create_date'] ?? json['created_at'] ?? '').toString(),
+      location: (json['location'] ?? '').toString(),
       isLiked:
           json['is_liked'] == true ||
           json['is_liked'] == 1 ||
-          json['is_liked']?.toString() == '1',
+          json['is_liked'] == '1',
     );
   }
 
-  static String resolveImageUrl(String path) {
-    if (path.isEmpty) return '';
-
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-
-    final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
-
-    return '${ApiConstants.serverRoot}/$normalizedPath';
-  }
-
-  PostModel copyWith({int? likesCount, bool? isLiked}) {
+  PostModel copyWith({
+    String? caption,
+    int? likesCount,
+    int? commentsCount,
+    bool? isLiked,
+  }) {
     return PostModel(
       id: id,
       userId: userId,
       username: username,
       avatarUrl: avatarUrl,
       imageUrl: imageUrl,
-      caption: caption,
+      caption: caption ?? this.caption,
       likesCount: likesCount ?? this.likesCount,
-      commentsCount: commentsCount,
+      commentsCount: commentsCount ?? this.commentsCount,
       createdAt: createdAt,
       location: location,
       isLiked: isLiked ?? this.isLiked,
     );
+  }
+
+  static String resolveImageUrl(String path) {
+    if (path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+
+    final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+    return '${ApiConstants.serverRoot}/$normalizedPath';
   }
 }

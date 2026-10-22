@@ -23,19 +23,35 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<PostViewModel>().fetchPosts();
+      if (!mounted) return;
+
+      final userId = int.tryParse(
+        context.read<LoginViewModel>().user?.id ?? '',
+      );
+
+      if (userId == null || userId < 1) {
+        return;
+      }
+
+      context.read<PostViewModel>().fetchPosts(userId: userId);
     });
   }
 
-  Future<void> _openCreatePost(BuildContext context) async {
+  Future<void> _openCreatePost() async {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const CreatePostView()),
     );
 
     if (!mounted) return;
-    await context.read<PostViewModel>().fetchPosts();
+
+    final userId = int.tryParse(context.read<LoginViewModel>().user?.id ?? '');
+
+    if (userId == null || userId < 1) return;
+
+    await context.read<PostViewModel>().fetchPosts(userId: userId);
   }
 
   void _logout(BuildContext context) {
@@ -58,9 +74,7 @@ class _HomeViewState extends State<HomeView> {
               child: _HomeHeader(onLogout: () => _logout(context)),
             ),
             SliverToBoxAdapter(
-              child: StoriesSection(
-                onCreatePost: () => _openCreatePost(context),
-              ),
+              child: StoriesSection(onCreatePost: () => _openCreatePost),
             ),
             Consumer<PostViewModel>(
               builder: (context, viewModel, child) {
@@ -87,7 +101,16 @@ class _HomeViewState extends State<HomeView> {
                           ),
                           const SizedBox(height: 12),
                           ElevatedButton(
-                            onPressed: viewModel.fetchPosts,
+                            // karna sekarang butuh parameter userId
+                            onPressed: () {
+                              final userId = int.tryParse(
+                                context.read<LoginViewModel>().user?.id ?? '',
+                              );
+
+                              if (userId != null && userId > 0) {
+                                viewModel.fetchPosts(userId: userId);
+                              }
+                            },
                             child: const Text('Coba Lagi'),
                           ),
                         ],
@@ -193,7 +216,7 @@ class StoriesSection extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         scrollDirection: Axis.horizontal,
         itemCount: _mockStories.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 13),
+        separatorBuilder: (_, _) => const SizedBox(width: 13),
         itemBuilder: (context, index) {
           if (index == 0) return _YourStory(onTap: onCreatePost);
           return _StoryItem(story: _mockStories[index - 1]);
@@ -329,13 +352,46 @@ class PostCard extends StatefulWidget {
 }
 
 class _PostCardState extends State<PostCard> {
-  bool _liked = false;
   bool _saved = false;
   bool _showLikeAnimation = false;
 
+  Future<void> _toggleLike() async {
+    final userId = int.tryParse(context.read<LoginViewModel>().user?.id ?? '');
+
+    if (userId == null || userId < 1) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Silakan login kembali.')));
+      return;
+    }
+
+    final success = await context.read<PostViewModel>().toggleLike(
+      userId: userId,
+      postId: widget.post.id,
+    );
+
+    if (!success && mounted) {
+      final message = context.read<PostViewModel>().errorMessage;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            message == null || message.isEmpty
+                ? 'Gagal memperbarui Like.'
+                : message,
+          ),
+        ),
+      );
+    }
+  }
+
   void _likeWithAnimation() {
+    // Double-tap hanya menambahkan Like jika belum disukai.
+    if (!widget.post.isLiked) {
+      _toggleLike();
+    }
+
     setState(() {
-      _liked = true;
       _showLikeAnimation = true;
     });
 
@@ -346,6 +402,168 @@ class _PostCardState extends State<PostCard> {
         _showLikeAnimation = false;
       });
     });
+  }
+
+  void _showPostOptions(BuildContext context, bool isOwner, int currentUserId) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              if (isOwner) ...[
+                ListTile(
+                  leading: const Icon(
+                    Icons.edit_outlined,
+                    color: _primaryColor,
+                  ),
+                  title: const Text('Edit Caption'),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    _showEditCaptionDialog(context, currentUserId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text(
+                    'Hapus Postingan',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    _showDeleteConfirmationDialog(context, currentUserId);
+                  },
+                ),
+              ] else ...[
+                const ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text('Opsi Postingan'),
+                  subtitle: Text(
+                    'Hanya pemilik postingan yang dapat mengedit atau menghapus.',
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditCaptionDialog(BuildContext context, int currentUserId) {
+    final controller = TextEditingController(text: widget.post.caption);
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit Caption'),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Tulis caption baru...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newCaption = controller.text.trim();
+                Navigator.pop(dialogContext);
+
+                final success = await context
+                    .read<PostViewModel>()
+                    .updateCaption(
+                      userId: currentUserId,
+                      postId: widget.post.id,
+                      newCaption: newCaption,
+                    );
+
+                if (!context.mounted) return;
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Caption berhasil diperbarui.'),
+                    ),
+                  );
+                } else {
+                  final error =
+                      context.read<PostViewModel>().errorMessage ??
+                      'Gagal memperbarui caption.';
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(error)));
+                }
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, int currentUserId) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Hapus Postingan'),
+          content: const Text(
+            'Apakah Anda yakin ingin menghapus postingan ini? Tindakan ini tidak dapat dibatalkan.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+
+                final success = await context.read<PostViewModel>().deletePost(
+                  userId: currentUserId,
+                  postId: widget.post.id,
+                );
+
+                if (!context.mounted) return;
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Postingan berhasil dihapus.'),
+                    ),
+                  );
+                } else {
+                  final error =
+                      context.read<PostViewModel>().errorMessage ??
+                      'Gagal menghapus postingan.';
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(error)));
+                }
+              },
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -396,7 +614,14 @@ class _PostCardState extends State<PostCard> {
                 ),
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  onPressed: () {},
+                  onPressed: () {
+                    final currentUser = context.read<LoginViewModel>().user;
+                    final currentUserId =
+                        int.tryParse(currentUser?.id ?? '') ?? 0;
+                    final isOwner =
+                        currentUserId > 0 && currentUserId == post.userId;
+                    _showPostOptions(context, isOwner, currentUserId);
+                  },
                   icon: const Icon(Icons.more_horiz, size: 22),
                 ),
               ],
@@ -434,7 +659,7 @@ class _PostCardState extends State<PostCard> {
                                 ),
                               );
                             },
-                            errorBuilder: (_, __, ___) => const ColoredBox(
+                            errorBuilder: (_, _, _) => const ColoredBox(
                               color: Color(0xFFE9EDF5),
                               child: Center(
                                 child: Icon(
@@ -465,9 +690,11 @@ class _PostCardState extends State<PostCard> {
             child: Row(
               children: [
                 _ActionIcon(
-                  icon: _liked ? Icons.favorite : Icons.favorite_border,
-                  color: _liked ? Colors.redAccent : const Color(0xFF424650),
-                  onTap: () => setState(() => _liked = !_liked),
+                  icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: post.isLiked
+                      ? Colors.redAccent
+                      : const Color(0xFF424650),
+                  onTap: _toggleLike,
                 ),
                 const SizedBox(width: 15),
                 _ActionIcon(icon: Icons.mode_comment_outlined, onTap: () {}),
@@ -484,7 +711,7 @@ class _PostCardState extends State<PostCard> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 5, 16, 0),
             child: Text(
-              '${post.likesCount + (_liked ? 1 : 0)} likes • ${post.commentsCount} comments',
+              '${post.likesCount} likes • ${post.commentsCount} comments',
               style: const TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
