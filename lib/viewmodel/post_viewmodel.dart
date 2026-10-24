@@ -13,10 +13,19 @@ class PostViewModel extends ChangeNotifier {
   String? _errorMessage;
 
   final Set<int> _postsBeingLiked = {};
+  final Set<int> _postsBeingSaved = {};
+
+  List<PostModel> _savedPosts = [];
+  bool _isLoadingSaved = false;
+  String? _savedErrorMessage;
 
   List<PostModel> get posts => _posts;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  List<PostModel> get savedPosts => _savedPosts;
+  bool get isLoadingSaved => _isLoadingSaved;
+  String? get savedErrorMessage => _savedErrorMessage;
 
   Future<void> fetchPosts({required int userId}) async {
     _isLoading = true;
@@ -51,15 +60,114 @@ class PostViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchSavedPosts({required int userId}) async {
+    if (userId < 1) return;
+
+    _isLoadingSaved = true;
+    _savedErrorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.get(
+        '${ApiConstants.savedPosts}?user_id=$userId',
+      );
+
+      final rawPosts = response['data'];
+
+      if (rawPosts is! List) {
+        throw const FormatException(
+          'Respons API tidak memiliki daftar data postingan tersimpan.',
+        );
+      }
+
+      _savedPosts = rawPosts.map((item) {
+        if (item is! Map) {
+          throw const FormatException(
+            'Format data postingan tersimpan tidak valid.',
+          );
+        }
+
+        return PostModel.fromJson(Map<String, dynamic>.from(item));
+      }).toList();
+    } catch (e) {
+      _savedErrorMessage = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _isLoadingSaved = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> toggleSave({required int userId, required int postId}) async {
+    if (userId < 1 || _postsBeingSaved.contains(postId)) {
+      return false;
+    }
+
+    final postIndex = _posts.indexWhere((post) => post.id == postId);
+    final savedIndex = _savedPosts.indexWhere((post) => post.id == postId);
+
+    if (postIndex == -1 && savedIndex == -1) return false;
+
+    final targetPost =
+        postIndex != -1 ? _posts[postIndex] : _savedPosts[savedIndex];
+    final willSave = !targetPost.isSaved;
+
+    _postsBeingSaved.add(postId);
+
+    try {
+      final endpoint =
+          willSave ? ApiConstants.savePost : ApiConstants.unsavePost;
+
+      final response = await _apiClient.post(
+        endpoint,
+        body: {'user_id': userId, 'post_id': postId},
+      );
+
+      final newIsSaved =
+          response['is_saved'] == true ||
+          response['is_saved'] == 1 ||
+          response['is_saved'] == '1' ||
+          (response['message'] != null && willSave);
+
+      if (postIndex != -1) {
+        _posts[postIndex] = _posts[postIndex].copyWith(isSaved: newIsSaved);
+      }
+
+      if (newIsSaved) {
+        if (savedIndex == -1) {
+          final postToSave =
+              postIndex != -1 ? _posts[postIndex] : targetPost;
+          _savedPosts.insert(0, postToSave.copyWith(isSaved: true));
+        } else {
+          _savedPosts[savedIndex] = _savedPosts[savedIndex].copyWith(
+            isSaved: true,
+          );
+        }
+      } else {
+        _savedPosts.removeWhere((post) => post.id == postId);
+      }
+
+      _errorMessage = null;
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      _postsBeingSaved.remove(postId);
+      notifyListeners();
+    }
+  }
+
   Future<bool> toggleLike({required int userId, required int postId}) async {
     if (userId < 1 || _postsBeingLiked.contains(postId)) {
       return false;
     }
 
     final index = _posts.indexWhere((post) => post.id == postId);
-    if (index == -1) return false;
+    final savedIndex = _savedPosts.indexWhere((post) => post.id == postId);
 
-    final post = _posts[index];
+    if (index == -1 && savedIndex == -1) return false;
+
+    final post = index != -1 ? _posts[index] : _savedPosts[savedIndex];
     _postsBeingLiked.add(postId);
 
     try {
@@ -79,10 +187,19 @@ class PostViewModel extends ChangeNotifier {
         '${response['like_count'] ?? post.likesCount}',
       );
 
-      _posts[index] = post.copyWith(
-        isLiked: newIsLiked,
-        likesCount: newLikesCount,
-      );
+      if (index != -1) {
+        _posts[index] = _posts[index].copyWith(
+          isLiked: newIsLiked,
+          likesCount: newLikesCount,
+        );
+      }
+
+      if (savedIndex != -1) {
+        _savedPosts[savedIndex] = _savedPosts[savedIndex].copyWith(
+          isLiked: newIsLiked,
+          likesCount: newLikesCount,
+        );
+      }
 
       _errorMessage = null;
       return true;
@@ -103,7 +220,9 @@ class PostViewModel extends ChangeNotifier {
     if (userId < 1 || postId < 1) return false;
 
     final index = _posts.indexWhere((post) => post.id == postId);
-    if (index == -1) return false;
+    final savedIndex = _savedPosts.indexWhere((post) => post.id == postId);
+
+    if (index == -1 && savedIndex == -1) return false;
 
     try {
       final response = await _apiClient.post(
@@ -112,7 +231,15 @@ class PostViewModel extends ChangeNotifier {
       );
 
       final updatedCaption = response['caption']?.toString() ?? newCaption;
-      _posts[index] = _posts[index].copyWith(caption: updatedCaption);
+
+      if (index != -1) {
+        _posts[index] = _posts[index].copyWith(caption: updatedCaption);
+      }
+      if (savedIndex != -1) {
+        _savedPosts[savedIndex] =
+            _savedPosts[savedIndex].copyWith(caption: updatedCaption);
+      }
+
       _errorMessage = null;
       notifyListeners();
       return true;
@@ -133,6 +260,7 @@ class PostViewModel extends ChangeNotifier {
       );
 
       _posts.removeWhere((post) => post.id == postId);
+      _savedPosts.removeWhere((post) => post.id == postId);
       _errorMessage = null;
       notifyListeners();
       return true;
@@ -145,11 +273,20 @@ class PostViewModel extends ChangeNotifier {
 
   void updateCommentCount({required int postId, required int delta}) {
     final index = _posts.indexWhere((post) => post.id == postId);
-    if (index == -1) return;
+    if (index != -1) {
+      final currentCount = _posts[index].commentsCount;
+      final newCount = (currentCount + delta) < 0 ? 0 : currentCount + delta;
+      _posts[index] = _posts[index].copyWith(commentsCount: newCount);
+    }
 
-    final currentCount = _posts[index].commentsCount;
-    final newCount = (currentCount + delta) < 0 ? 0 : currentCount + delta;
-    _posts[index] = _posts[index].copyWith(commentsCount: newCount);
+    final savedIndex = _savedPosts.indexWhere((post) => post.id == postId);
+    if (savedIndex != -1) {
+      final currentCount = _savedPosts[savedIndex].commentsCount;
+      final newCount = (currentCount + delta) < 0 ? 0 : currentCount + delta;
+      _savedPosts[savedIndex] =
+          _savedPosts[savedIndex].copyWith(commentsCount: newCount);
+    }
+
     notifyListeners();
   }
 }

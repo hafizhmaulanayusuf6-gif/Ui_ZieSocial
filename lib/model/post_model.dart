@@ -12,6 +12,7 @@ class PostModel {
   final String createdAt;
   final String location;
   final bool isLiked;
+  final bool isSaved;
 
   const PostModel({
     required this.id,
@@ -25,6 +26,7 @@ class PostModel {
     required this.createdAt,
     required this.location,
     this.isLiked = false,
+    this.isSaved = false,
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,10 @@ class PostModel {
           json['is_liked'] == true ||
           json['is_liked'] == 1 ||
           json['is_liked'] == '1',
+      isSaved:
+          json['is_saved'] == true ||
+          json['is_saved'] == 1 ||
+          json['is_saved'] == '1',
     );
   }
 
@@ -58,6 +64,7 @@ class PostModel {
     int? likesCount,
     int? commentsCount,
     bool? isLiked,
+    bool? isSaved,
   }) {
     return PostModel(
       id: id,
@@ -71,6 +78,7 @@ class PostModel {
       createdAt: createdAt,
       location: location,
       isLiked: isLiked ?? this.isLiked,
+      isSaved: isSaved ?? this.isSaved,
     );
   }
 

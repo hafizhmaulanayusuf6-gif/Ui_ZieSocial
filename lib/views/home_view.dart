@@ -10,6 +10,8 @@ import 'package:ziesocial/viewmodel/comment_viewmodel.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
 
 import 'package:lottie/lottie.dart';
+import 'package:ziesocial/views/profile_view.dart';
+import 'package:ziesocial/views/saved_posts_view.dart';
 
 const _primaryColor = Color(0xFF4F46E5);
 const _pageColor = Color(0xFFF8F9FC);
@@ -181,6 +183,20 @@ class _HomeHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          IconButton(
+            tooltip: 'Postingan Tersimpan',
+            icon: const Icon(
+              Icons.bookmark_outline_rounded,
+              color: _primaryColor,
+              size: 24,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SavedPostsView()),
+              );
+            },
+          ),
           PopupMenuButton<String>(
             tooltip: 'Menu akun',
             icon: const Icon(
@@ -189,9 +205,42 @@ class _HomeHeader extends StatelessWidget {
             ),
             onSelected: (value) {
               if (value == 'logout') onLogout();
+              if (value == 'saved') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SavedPostsView()),
+                );
+              }
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'logout', child: Text('Logout')),
+              PopupMenuItem(
+                value: 'saved',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.bookmark_outline_rounded,
+                      size: 20,
+                      color: _primaryColor,
+                    ),
+                    SizedBox(width: 10),
+                    Text('Postingan Tersimpan'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.logout_rounded,
+                      size: 20,
+                      color: Colors.redAccent,
+                    ),
+                    SizedBox(width: 10),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -354,8 +403,52 @@ class PostCard extends StatefulWidget {
 }
 
 class _PostCardState extends State<PostCard> {
-  bool _saved = false;
   bool _showLikeAnimation = false;
+
+  Future<void> _toggleSave() async {
+    final userId = int.tryParse(context.read<LoginViewModel>().user?.id ?? '');
+
+    if (userId == null || userId < 1) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Silakan login kembali.')));
+      return;
+    }
+
+    final willSave = !widget.post.isSaved;
+
+    final success = await context.read<PostViewModel>().toggleSave(
+      userId: userId,
+      postId: widget.post.id,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            willSave
+                ? 'Postingan berhasil disimpan.'
+                : 'Postingan dihapus dari simpanan.',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      final message = context.read<PostViewModel>().errorMessage;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            message == null || message.isEmpty
+                ? 'Gagal menyimpan postingan.'
+                : message,
+          ),
+        ),
+      );
+    }
+  }
 
   Future<void> _toggleLike() async {
     final userId = int.tryParse(context.read<LoginViewModel>().user?.id ?? '');
@@ -720,8 +813,13 @@ class _PostCardState extends State<PostCard> {
                 _ActionIcon(icon: Icons.send_outlined, onTap: () {}),
                 const Spacer(),
                 _ActionIcon(
-                  icon: _saved ? Icons.bookmark : Icons.bookmark_border,
-                  onTap: () => setState(() => _saved = !_saved),
+                  icon: widget.post.isSaved
+                      ? Icons.bookmark
+                      : Icons.bookmark_border,
+                  color: widget.post.isSaved
+                      ? _primaryColor
+                      : const Color(0xFF424650),
+                  onTap: _toggleSave,
                 ),
               ],
             ),
@@ -804,7 +902,12 @@ class _HomeBottomNavigation extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: 0,
       onTap: (index) {
-        // Home menjadi tab aktif; tab lain belum dihubungkan.
+        if (index == 1) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfileView()),
+          );
+        }
       },
       type: BottomNavigationBarType.fixed,
       backgroundColor: Colors.white,

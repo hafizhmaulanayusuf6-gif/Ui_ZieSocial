@@ -14,4 +14,7 @@ class ApiConstants {
   static String get createComment => '$baseUrl/comments/create.php';
   static String get readComments => '$baseUrl/comments/read.php';
   static String get deleteComment => '$baseUrl/comments/delete.php';
+  static String get savePost => '$baseUrl/posts/save.php';
+  static String get unsavePost => '$baseUrl/posts/unsave.php';
+  static String get savedPosts => '$baseUrl/posts/saved.php';
 }
