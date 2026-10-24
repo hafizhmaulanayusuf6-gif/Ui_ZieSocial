@@ -10,6 +10,7 @@ import 'package:ziesocial/viewmodel/comment_viewmodel.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
 
 import 'package:lottie/lottie.dart';
+import 'package:ziesocial/viewmodel/profile_viewmodel.dart';
 import 'package:ziesocial/views/profile_view.dart';
 import 'package:ziesocial/views/saved_posts_view.dart';
 
@@ -168,9 +169,17 @@ class _HomeHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 13,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/100?img=12'),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileView()),
+              );
+            },
+            child: const CircleAvatar(
+              radius: 14,
+              backgroundImage: NetworkImage('https://i.pravatar.cc/100?img=12'),
+            ),
           ),
           const Spacer(),
           const Text(
@@ -205,6 +214,12 @@ class _HomeHeader extends StatelessWidget {
             ),
             onSelected: (value) {
               if (value == 'logout') onLogout();
+              if (value == 'profile') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileView()),
+                );
+              }
               if (value == 'saved') {
                 Navigator.push(
                   context,
@@ -213,6 +228,20 @@ class _HomeHeader extends StatelessWidget {
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.person_outline_rounded,
+                      size: 20,
+                      color: _primaryColor,
+                    ),
+                    SizedBox(width: 10),
+                    Text('Profil Saya'),
+                  ],
+                ),
+              ),
               PopupMenuItem(
                 value: 'saved',
                 child: Row(
@@ -420,11 +449,19 @@ class _PostCardState extends State<PostCard> {
     final success = await context.read<PostViewModel>().toggleSave(
       userId: userId,
       postId: widget.post.id,
+      fallbackPost: widget.post,
     );
 
     if (!mounted) return;
 
     if (success) {
+      try {
+        context.read<ProfileViewModel>().syncPostSave(
+          postId: widget.post.id,
+          isSaved: willSave,
+        );
+      } catch (_) {}
+
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -460,12 +497,24 @@ class _PostCardState extends State<PostCard> {
       return;
     }
 
+    final willLike = !widget.post.isLiked;
     final success = await context.read<PostViewModel>().toggleLike(
       userId: userId,
       postId: widget.post.id,
+      fallbackPost: widget.post,
     );
 
-    if (!success && mounted) {
+    if (success && mounted) {
+      try {
+        final newLikes =
+            (widget.post.likesCount + (willLike ? 1 : -1)).clamp(0, 999999);
+        context.read<ProfileViewModel>().syncPostLike(
+          postId: widget.post.id,
+          isLiked: willLike,
+          likesCount: newLikes,
+        );
+      } catch (_) {}
+    } else if (!success && mounted) {
       final message = context.read<PostViewModel>().errorMessage;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -687,37 +736,63 @@ class _PostCardState extends State<PostCard> {
             padding: const EdgeInsets.fromLTRB(16, 10, 14, 10),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: const Color(0xFFE9EDF5),
-                  backgroundImage: post.avatarUrl.isNotEmpty
-                      ? NetworkImage(post.avatarUrl)
-                      : null,
-                  child: post.avatarUrl.isEmpty
-                      ? const Icon(Icons.person, size: 18)
-                      : null,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProfileView(
+                          userId: post.userId,
+                          username: post.username,
+                        ),
+                      ),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: const Color(0xFFE9EDF5),
+                    backgroundImage: post.avatarUrl.isNotEmpty
+                        ? NetworkImage(post.avatarUrl)
+                        : null,
+                    child: post.avatarUrl.isEmpty
+                        ? const Icon(Icons.person, size: 18)
+                        : null,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.username,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProfileView(
+                            userId: post.userId,
+                            username: post.username,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        post.location,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF858A96),
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.username,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          post.location,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF858A96),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 IconButton(

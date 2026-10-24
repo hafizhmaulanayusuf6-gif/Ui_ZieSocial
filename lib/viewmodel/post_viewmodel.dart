@@ -97,7 +97,11 @@ class PostViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> toggleSave({required int userId, required int postId}) async {
+  Future<bool> toggleSave({
+    required int userId,
+    required int postId,
+    PostModel? fallbackPost,
+  }) async {
     if (userId < 1 || _postsBeingSaved.contains(postId)) {
       return false;
     }
@@ -105,10 +109,13 @@ class PostViewModel extends ChangeNotifier {
     final postIndex = _posts.indexWhere((post) => post.id == postId);
     final savedIndex = _savedPosts.indexWhere((post) => post.id == postId);
 
-    if (postIndex == -1 && savedIndex == -1) return false;
+    if (postIndex == -1 && savedIndex == -1 && fallbackPost == null) {
+      return false;
+    }
 
-    final targetPost =
-        postIndex != -1 ? _posts[postIndex] : _savedPosts[savedIndex];
+    final targetPost = postIndex != -1
+        ? _posts[postIndex]
+        : (savedIndex != -1 ? _savedPosts[savedIndex] : fallbackPost!);
     final willSave = !targetPost.isSaved;
 
     _postsBeingSaved.add(postId);
@@ -157,7 +164,11 @@ class PostViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> toggleLike({required int userId, required int postId}) async {
+  Future<bool> toggleLike({
+    required int userId,
+    required int postId,
+    PostModel? fallbackPost,
+  }) async {
     if (userId < 1 || _postsBeingLiked.contains(postId)) {
       return false;
     }
@@ -165,9 +176,13 @@ class PostViewModel extends ChangeNotifier {
     final index = _posts.indexWhere((post) => post.id == postId);
     final savedIndex = _savedPosts.indexWhere((post) => post.id == postId);
 
-    if (index == -1 && savedIndex == -1) return false;
+    if (index == -1 && savedIndex == -1 && fallbackPost == null) {
+      return false;
+    }
 
-    final post = index != -1 ? _posts[index] : _savedPosts[savedIndex];
+    final post = index != -1
+        ? _posts[index]
+        : (savedIndex != -1 ? _savedPosts[savedIndex] : fallbackPost!);
     _postsBeingLiked.add(postId);
 
     try {
@@ -185,7 +200,7 @@ class PostViewModel extends ChangeNotifier {
 
       final newLikesCount = int.tryParse(
         '${response['like_count'] ?? post.likesCount}',
-      );
+      ) ?? (post.likesCount + (newIsLiked ? 1 : -1)).clamp(0, 999999);
 
       if (index != -1) {
         _posts[index] = _posts[index].copyWith(

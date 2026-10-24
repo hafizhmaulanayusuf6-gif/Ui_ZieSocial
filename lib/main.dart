@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; //
 import 'package:ziesocial/viewmodel/create_post_viewmodel.dart';
 import 'package:ziesocial/viewmodel/register_viewmodel.dart';
+import 'package:ziesocial/viewmodel/profile_viewmodel.dart';
 
 // Sesuaikan import di bawah ini dengan struktur folder project Anda
 import 'core/network.dart'; // atau lokasi ApiClient Anda
@@ -40,6 +41,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => CreatePostViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => PostViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => CommentViewModel(apiClient)),
+        ChangeNotifierProvider(create: (_) => ProfileViewModel(apiClient)),
       ],
       child: const ZieSocialApp(),
     ),

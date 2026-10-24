@@ -17,4 +17,8 @@ class ApiConstants {
   static String get savePost => '$baseUrl/posts/save.php';
   static String get unsavePost => '$baseUrl/posts/unsave.php';
   static String get savedPosts => '$baseUrl/posts/saved.php';
+  static String get userProfile => '$baseUrl/users/profile.php';
+  static String get followUser => '$baseUrl/users/follow.php';
+  static String get unfollowUser => '$baseUrl/users/unfollow.php';
+  static String get followList => '$baseUrl/users/follow_list.php';
 }
