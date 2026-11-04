@@ -17,9 +17,7 @@ class CreatePostView extends StatefulWidget {
 
 class _CreatePostViewState extends State<CreatePostView> {
   final _captionController = TextEditingController();
-
   final ImagePicker _picker = ImagePicker();
-
   XFile? _selectedImage;
 
   @override
@@ -39,10 +37,9 @@ class _CreatePostViewState extends State<CreatePostView> {
     }
 
     final file = File(image.path);
-
     final fileSize = await file.length();
 
-    // Maksimal 5mb
+    // Maksimal 5MB
     if (fileSize > 5 * 1024 * 1024) {
       if (!mounted) return;
 
@@ -53,14 +50,19 @@ class _CreatePostViewState extends State<CreatePostView> {
       return;
     }
 
-    // Cek ekstensi file
+    // Cek ekstensi file (JPG, PNG, WEBP)
     final extension = image.path.split('.').last.toLowerCase();
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
-    if (extension != 'jpg' && extension != 'jpeg') {
+    if (!allowedExtensions.contains(extension)) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hanya gambar JPG yang diperbolehkan')),
+        const SnackBar(
+          content: Text(
+            'Format tidak didukung. Gunakan gambar JPG, PNG, atau WEBP.',
+          ),
+        ),
       );
 
       return;
@@ -72,29 +74,34 @@ class _CreatePostViewState extends State<CreatePostView> {
   }
 
   Future<void> _createPost() async {
-    // Pastikan gambar sudah dipilih
+    final vm = context.read<CreatePostViewModel>();
+    if (vm.isLoading) return;
+
     if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Silahkan pilih gambar terlebih dahulu.')),
+        const SnackBar(content: Text('Silakan pilih gambar terlebih dahulu.')),
       );
-
       return;
     }
 
-    // Ambil user yang sedang login
     final user = context.read<LoginViewModel>().user;
-
     if (user == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('User belum login.')));
-
       return;
     }
 
-    // Kirim postingan ke API
-    final success = await context.read<CreatePostViewModel>().createPost(
-      userId: int.parse(user.id),
+    final userId = int.tryParse(user.id);
+    if (userId == null || userId < 1) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ID pengguna tidak valid.')));
+      return;
+    }
+
+    final success = await vm.createPost(
+      userId: userId,
       imagePath: _selectedImage!.path,
       caption: _captionController.text.trim(),
     );
@@ -102,21 +109,15 @@ class _CreatePostViewState extends State<CreatePostView> {
     if (!mounted) return;
 
     if (success) {
-      final message =
-          context.read<CreatePostViewModel>().successMessage ??
-          'Postingan berhasil dibuat.';
-
+      final message = vm.successMessage ?? 'Postingan berhasil dibuat.';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
 
-      // Kembali ke Home
-      Navigator.pop(context);
+      // Kembali ke halaman sebelumnya dengan hasil true
+      Navigator.pop(context, true);
     } else {
-      final message =
-          context.read<CreatePostViewModel>().errorMessage ??
-          'Gagal membuat postingan.';
-
+      final message = vm.errorMessage ?? 'Gagal membuat postingan.';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -128,7 +129,13 @@ class _CreatePostViewState extends State<CreatePostView> {
     final isLoading = context.watch<CreatePostViewModel>().isLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Buat Postingan')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Buat Postingan'),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        foregroundColor: Colors.black87,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -136,17 +143,20 @@ class _CreatePostViewState extends State<CreatePostView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GestureDetector(
-                onTap: _pickImage,
+                onTap: isLoading ? null : _pickImage,
                 child: Container(
-                  height: 200,
+                  height: 220,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[400]!),
+                    color: const Color(0xFFF8F9FA),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1.5,
+                    ),
                   ),
                   child: _selectedImage != null
                       ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(15),
                           child: Image.file(
                             File(_selectedImage!.path),
                             fit: BoxFit.cover,
@@ -159,35 +169,56 @@ class _CreatePostViewState extends State<CreatePostView> {
                             Icon(
                               Icons.add_photo_alternate_outlined,
                               size: 48,
-                              color: Colors.grey,
+                              color: Color(0xFF94A3B8),
                             ),
                             Gap(8),
                             Text(
-                              'Pilih Gambar (JPG max 5MB)',
-                              style: TextStyle(color: Colors.grey),
+                              'Pilih Gambar (JPG, PNG max 5MB)',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
                 ),
               ),
-
-              const Gap(16),
-
+              const Gap(20),
               TextField(
                 controller: _captionController,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'Tulis caption...',
-                  border: OutlineInputBorder(),
+                enabled: !isLoading,
+                decoration: InputDecoration(
+                  hintText: 'Tulis caption menarik...',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 14,
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFF8F9FA),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF4F46E5),
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
-
-              const Gap(24),
-
+              const Gap(28),
               AppButton(
                 text: 'Unggah Postingan',
                 isLoading: isLoading,
-                onPressed: _createPost,
+                onPressed: isLoading ? () {} : _createPost,
               ),
             ],
           ),

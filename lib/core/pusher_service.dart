@@ -57,6 +57,7 @@ class PusherService {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Accept': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: {
           'socket_id': socketId,
@@ -80,7 +81,10 @@ class PusherService {
   }
 
   void _handleGlobalEvent(PusherEvent event) {
-    if (event.eventName != 'new-message') return;
+    if (event.eventName != 'new-message' &&
+        !event.eventName.endsWith('new-message')) {
+      return;
+    }
 
     try {
       final dynamic raw = event.data;
@@ -106,14 +110,7 @@ class PusherService {
     final channelName = 'private-chat.$conversationId';
 
     try {
-      await _pusher.subscribe(
-        channelName: channelName,
-        onEvent: (event) {
-          if (event is PusherEvent) {
-            _handleGlobalEvent(event);
-          }
-        },
-      );
+      await _pusher.subscribe(channelName: channelName);
     } catch (e) {
       debugPrint('Pusher subscribe warning for $channelName: $e');
     }

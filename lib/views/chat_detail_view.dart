@@ -42,14 +42,14 @@ class _ChatDetailViewState extends State<ChatDetailView> {
         ) {
           if (mounted) {
             context.read<ChatViewModel>().onMessageReceived(message);
-            _scrollToBottom();
+            _scrollToBottom(force: false);
           }
         });
 
         context
             .read<ChatViewModel>()
             .fetchMessages(conversationId: widget.conversationId, userId: uid)
-            .then((_) => _scrollToBottom());
+            .then((_) => _scrollToBottom(force: true));
       }
     });
   }
@@ -62,9 +62,17 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  bool get _isNearBottom {
+    if (!_scrollController.hasClients) return true;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return (maxScroll - currentScroll) <= 150;
+  }
+
+  void _scrollToBottom({bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (!_scrollController.hasClients) return;
+      if (force || _isNearBottom) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 250),
@@ -88,7 +96,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     );
 
     if (success) {
-      _scrollToBottom();
+      _scrollToBottom(force: true);
     } else if (mounted && chatVm.messagesError != null) {
       ScaffoldMessenger.of(
         context,

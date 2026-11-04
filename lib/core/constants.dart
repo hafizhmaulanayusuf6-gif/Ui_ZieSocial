@@ -41,6 +41,6 @@ class ApiConstants {
   static String get chatAuthChannel => '$baseUrl/chat/auth_channel.php';
 
   // Pusher Client Configuration
-  static const String pusherAppKey = 'd53ceef53c13e2f7b8fb';
+  static const String pusherAppKey = '7773b9e0277a3e998164';
   static const String pusherCluster = 'ap1';
 }

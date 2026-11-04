@@ -80,9 +80,7 @@ class _HomeViewState extends State<HomeView> {
             SliverToBoxAdapter(
               child: _HomeHeader(onLogout: () => _logout(context)),
             ),
-            SliverToBoxAdapter(
-              child: StoriesSection(onCreatePost: () => _openCreatePost),
-            ),
+            const SliverToBoxAdapter(child: StoriesSection()),
             Consumer<PostViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.isLoading && viewModel.posts.isEmpty) {
@@ -150,7 +148,7 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
       ),
-      bottomNavigationBar: const _HomeBottomNavigation(),
+      bottomNavigationBar: _HomeBottomNavigation(onCreatePost: _openCreatePost),
     );
   }
 }
@@ -169,21 +167,9 @@ class _HomeHeader extends StatelessWidget {
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFEDEEF2))),
       ),
-      child: Row(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileView()),
-              );
-            },
-            child: const CircleAvatar(
-              radius: 14,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/100?img=12'),
-            ),
-          ),
-          const Spacer(),
           const Text(
             'ZieSocial',
             style: TextStyle(
@@ -193,100 +179,93 @@ class _HomeHeader extends StatelessWidget {
               letterSpacing: -0.7,
             ),
           ),
-          const Spacer(),
-          IconButton(
-            tooltip: 'Postingan Tersimpan',
-            icon: const Icon(
-              Icons.bookmark_outline_rounded,
-              color: _primaryColor,
-              size: 24,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SavedPostsView()),
-              );
-            },
-          ),
-          IconButton(
-            tooltip: 'Pesan',
-            icon: const Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: _primaryColor,
-              size: 24,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ConversationsView()),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Menu akun',
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: _primaryColor,
-            ),
-            onSelected: (value) {
-              if (value == 'logout') onLogout();
-              if (value == 'profile') {
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ProfileView()),
                 );
-              }
-              if (value == 'saved') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SavedPostsView()),
-                );
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline_rounded,
-                      size: 20,
-                      color: _primaryColor,
-                    ),
-                    SizedBox(width: 10),
-                    Text('Profil Saya'),
-                  ],
+              },
+              child: const CircleAvatar(
+                radius: 16,
+                backgroundImage: NetworkImage(
+                  'https://i.pravatar.cc/100?img=12',
                 ),
               ),
-              PopupMenuItem(
-                value: 'saved',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.bookmark_outline_rounded,
-                      size: 20,
-                      color: _primaryColor,
-                    ),
-                    SizedBox(width: 10),
-                    Text('Postingan Tersimpan'),
-                  ],
-                ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: PopupMenuButton<String>(
+              tooltip: 'Menu akun',
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: _primaryColor,
+                size: 24,
               ),
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout_rounded,
-                      size: 20,
-                      color: Colors.redAccent,
-                    ),
-                    SizedBox(width: 10),
-                    Text('Logout'),
-                  ],
+              onSelected: (value) {
+                if (value == 'logout') onLogout();
+                if (value == 'profile') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileView()),
+                  );
+                }
+                if (value == 'saved') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SavedPostsView()),
+                  );
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline_rounded,
+                        size: 20,
+                        color: _primaryColor,
+                      ),
+                      SizedBox(width: 10),
+                      Text('Profil Saya'),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                PopupMenuItem(
+                  value: 'saved',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.bookmark_outline_rounded,
+                        size: 20,
+                        color: _primaryColor,
+                      ),
+                      SizedBox(width: 10),
+                      Text('Postingan Tersimpan'),
+                    ],
+                  ),
+                ),
+                PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.logout_rounded,
+                        size: 20,
+                        color: Colors.redAccent,
+                      ),
+                      SizedBox(width: 10),
+                      Text('Logout'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -295,9 +274,7 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class StoriesSection extends StatelessWidget {
-  final VoidCallback onCreatePost;
-
-  const StoriesSection({super.key, required this.onCreatePost});
+  const StoriesSection({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -314,7 +291,7 @@ class StoriesSection extends StatelessWidget {
         itemCount: _mockStories.length + 1,
         separatorBuilder: (_, _) => const SizedBox(width: 13),
         itemBuilder: (context, index) {
-          if (index == 0) return _YourStory(onTap: onCreatePost);
+          if (index == 0) return const _YourStory();
           return _StoryItem(story: _mockStories[index - 1]);
         },
       ),
@@ -323,66 +300,61 @@ class StoriesSection extends StatelessWidget {
 }
 
 class _YourStory extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _YourStory({required this.onTap});
+  const _YourStory();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 54,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFE0E3EA),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: const CircleAvatar(
-                    radius: 23,
-                    backgroundImage: NetworkImage(
-                      'https://i.pravatar.cc/120?img=12',
-                    ),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFE0E3EA),
+                    width: 1.5,
                   ),
                 ),
-                Positioned(
-                  right: -1,
-                  bottom: -1,
-                  child: Container(
-                    width: 19,
-                    height: 19,
-                    decoration: BoxDecoration(
-                      color: _primaryColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    child: const Icon(Icons.add, size: 14, color: Colors.white),
+                child: const CircleAvatar(
+                  radius: 23,
+                  backgroundImage: NetworkImage(
+                    'https://i.pravatar.cc/120?img=12',
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Your Story',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF454956),
               ),
+              Positioned(
+                right: -1,
+                bottom: -1,
+                child: Container(
+                  width: 19,
+                  height: 19,
+                  decoration: BoxDecoration(
+                    color: _primaryColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: const Icon(Icons.add, size: 14, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Your Story',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -988,7 +960,9 @@ class _ActionIcon extends StatelessWidget {
 }
 
 class _HomeBottomNavigation extends StatefulWidget {
-  const _HomeBottomNavigation();
+  final Future<void> Function() onCreatePost;
+
+  const _HomeBottomNavigation({required this.onCreatePost});
 
   @override
   State<_HomeBottomNavigation> createState() => _HomeBottomNavigationState();
@@ -997,49 +971,158 @@ class _HomeBottomNavigation extends StatefulWidget {
 class _HomeBottomNavigationState extends State<_HomeBottomNavigation> {
   int _currentIndex = 0;
 
+  Future<void> _handleNavTap(int index) async {
+    if (index == 0) {
+      if (_currentIndex != 0) {
+        setState(() => _currentIndex = 0);
+      }
+      return;
+    }
+
+    if (index == 1) {
+      setState(() => _currentIndex = 1);
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ConversationsView()),
+      );
+      if (mounted) setState(() => _currentIndex = 0);
+    } else if (index == 2) {
+      await widget.onCreatePost();
+      if (mounted) setState(() => _currentIndex = 0);
+    } else if (index == 3) {
+      setState(() => _currentIndex = 3);
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SearchView()),
+      );
+      if (mounted) setState(() => _currentIndex = 0);
+    } else if (index == 4) {
+      setState(() => _currentIndex = 4);
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfileView()),
+      );
+      if (mounted) setState(() => _currentIndex = 0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: _currentIndex,
-      onTap: (index) async {
-        if (index == _currentIndex && index == 0) return;
-        setState(() => _currentIndex = index);
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFEDEEF2))),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                index: 0,
+                icon: Icons.home_outlined,
+                selectedIcon: Icons.home_rounded,
+                label: 'Home',
+              ),
+              _buildNavItem(
+                index: 1,
+                icon: Icons.chat_bubble_outline_rounded,
+                selectedIcon: Icons.chat_bubble_rounded,
+                label: 'Chat',
+              ),
+              _buildCreatePostButton(),
+              _buildNavItem(
+                index: 3,
+                icon: Icons.search_rounded,
+                selectedIcon: Icons.search_rounded,
+                label: 'Search',
+              ),
+              _buildNavItem(
+                index: 4,
+                icon: Icons.person_outline_rounded,
+                selectedIcon: Icons.person_rounded,
+                label: 'Profile',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-        if (index == 1) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProfileView()),
-          );
-          if (mounted) setState(() => _currentIndex = 0);
-        } else if (index == 2) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SearchView()),
-          );
-          if (mounted) setState(() => _currentIndex = 0);
-        }
-      },
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: _primaryColor,
-      unselectedItemColor: const Color(0xFF454956),
-      showSelectedLabels: false,
-      showUnselectedLabels: false,
-      elevation: 8,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_rounded, size: 23),
-          label: 'Home',
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData selectedIcon,
+    required String label,
+  }) {
+    final isSelected = _currentIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => _handleNavTap(index),
+        splashColor: _primaryColor.withValues(alpha: 0.1),
+        highlightColor: Colors.transparent,
+        child: SizedBox(
+          height: 60,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isSelected ? selectedIcon : icon,
+                size: 24,
+                color: isSelected ? _primaryColor : const Color(0xFF64748B),
+              ),
+              const SizedBox(height: 4),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: isSelected ? 4 : 0,
+                height: 4,
+                decoration: const BoxDecoration(
+                  color: _primaryColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded, size: 23),
-          label: 'Profile',
+      ),
+    );
+  }
+
+  Widget _buildCreatePostButton() {
+    return Expanded(
+      child: InkWell(
+        onTap: () => _handleNavTap(2),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Center(
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: _primaryColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _primaryColor.withValues(alpha: 0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search_rounded, size: 23),
-          label: 'Search',
-        ),
-      ],
+      ),
     );
   }
 }
