@@ -112,4 +112,3 @@ class ChatMessageModel {
     'created_at': createdAt,
   };
 }
-

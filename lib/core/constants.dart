@@ -1,22 +1,32 @@
 class ApiConstants {
-  static const String serverRoot = 'http://localhost/BackEnd_ziesocial';
+  // Base URL backend melalui ngrok.
+  static const String serverRoot =
+      'https://unpitted-alana-overwarmed.ngrok-free.dev/BackEnd_ziesocial';
 
+  // Base URL API.
   static String get baseUrl => '$serverRoot/api';
 
+  // Authentication
   static String get login => '$baseUrl/auth/login.php';
   static String get register => '$baseUrl/auth/register.php';
+
+  // Posts
   static String get createPost => '$baseUrl/posts/create.php';
   static String get posts => '$baseUrl/posts/read.php';
   static String get like => '$baseUrl/posts/like.php';
   static String get unlike => '$baseUrl/posts/unlike.php';
   static String get updatePost => '$baseUrl/posts/update.php';
   static String get deletePost => '$baseUrl/posts/delete.php';
-  static String get createComment => '$baseUrl/comments/create.php';
-  static String get readComments => '$baseUrl/comments/read.php';
-  static String get deleteComment => '$baseUrl/comments/delete.php';
   static String get savePost => '$baseUrl/posts/save.php';
   static String get unsavePost => '$baseUrl/posts/unsave.php';
   static String get savedPosts => '$baseUrl/posts/saved.php';
+
+  // Comments
+  static String get createComment => '$baseUrl/comments/create.php';
+  static String get readComments => '$baseUrl/comments/read.php';
+  static String get deleteComment => '$baseUrl/comments/delete.php';
+
+  // Users
   static String get userProfile => '$baseUrl/users/profile.php';
   static String get followUser => '$baseUrl/users/follow.php';
   static String get unfollowUser => '$baseUrl/users/unfollow.php';

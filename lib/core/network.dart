@@ -20,7 +20,11 @@ class ApiClient {
   }) async {
     final response = await http.post(
       Uri.parse(url),
-      headers: {'Content-Type': 'application/json', ...?headers},
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        ...?headers,
+      },
       body: jsonEncode(body),
     );
 
@@ -32,8 +36,13 @@ class ApiClient {
     required String filePath,
     required String fieldName,
     Map<String, String>? fields,
+    Map<String, String>? headers,
   }) async {
     final request = http.MultipartRequest('POST', Uri.parse(url));
+    request.headers['ngrok-skip-browser-warning'] = 'true';
+    if (headers != null) {
+      request.headers.addAll(headers);
+    }
 
     request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
 
@@ -48,10 +57,17 @@ class ApiClient {
     return _handleResponse(response);
   }
 
-  Future<Map<String, dynamic>> get(String url) async {
+  Future<Map<String, dynamic>> get(
+    String url, {
+    Map<String, String>? headers,
+  }) async {
     final response = await http.get(
       Uri.parse(url),
-      headers: {'Accept': 'application/json'},
+      headers: {
+        'Accept': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        ...?headers,
+      },
     );
 
     return _handleResponse(response);
