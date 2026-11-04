@@ -49,9 +49,7 @@ class ProfileViewModel extends ChangeNotifier {
         '${ApiConstants.userProfile}?profile_id=$profileId&viewer_id=$viewerId',
       );
 
-      _profile = UserProfileModel.fromJson(
-        Map<String, dynamic>.from(response),
-      );
+      _profile = UserProfileModel.fromJson(Map<String, dynamic>.from(response));
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
     } finally {
@@ -77,8 +75,9 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final endpoint =
-          willFollow ? ApiConstants.followUser : ApiConstants.unfollowUser;
+      final endpoint = willFollow
+          ? ApiConstants.followUser
+          : ApiConstants.unfollowUser;
 
       final response = await _apiClient.post(
         endpoint,
@@ -134,8 +133,9 @@ class ProfileViewModel extends ChangeNotifier {
     final willFollow = !_followList[idx].isFollowing;
 
     try {
-      final endpoint =
-          willFollow ? ApiConstants.followUser : ApiConstants.unfollowUser;
+      final endpoint = willFollow
+          ? ApiConstants.followUser
+          : ApiConstants.unfollowUser;
 
       final response = await _apiClient.post(
         endpoint,
@@ -226,10 +226,7 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   /// Sinkronkan status simpan postingan di halaman profil
-  void syncPostSave({
-    required int postId,
-    required bool isSaved,
-  }) {
+  void syncPostSave({required int postId, required bool isSaved}) {
     if (_profile == null) return;
     final updatedPosts = _profile!.posts.map((p) {
       if (p.id == postId) {

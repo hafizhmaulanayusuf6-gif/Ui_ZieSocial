@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; //
+import 'package:provider/provider.dart';
 import 'package:ziesocial/viewmodel/create_post_viewmodel.dart';
 import 'package:ziesocial/viewmodel/register_viewmodel.dart';
 import 'package:ziesocial/viewmodel/profile_viewmodel.dart';
-
-// Sesuaikan import di bawah ini dengan struktur folder project Anda
-import 'core/network.dart'; // atau lokasi ApiClient Anda
-import 'viewmodel/login_viewmodel.dart'; // atau lokasi LoginViewModel Anda
+import 'core/network.dart';
+import 'viewmodel/login_viewmodel.dart';
 import 'views/login_view.dart';
 import 'package:ziesocial/viewmodel/comment_viewmodel.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
-//[cite: 2]
+import 'package:ziesocial/viewmodel/search_viewmodel.dart';
+import 'package:ziesocial/viewmodel/chat_viewmodel.dart';
 
 import 'dart:io';
 
@@ -32,16 +31,13 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LoginViewModel(apiClient)),
-        // Cukup tulis 1 kali saja di sini:
-        ChangeNotifierProvider(
-          create: (_) => RegisterViewmodel(
-            apiClient,
-          ), // atau RegisterViewModel() jika tidak butuh apiClient
-        ),
+        ChangeNotifierProvider(create: (_) => RegisterViewmodel(apiClient)),
         ChangeNotifierProvider(create: (_) => CreatePostViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => PostViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => CommentViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => ProfileViewModel(apiClient)),
+        ChangeNotifierProvider(create: (_) => SearchViewModel(apiClient)),
+        ChangeNotifierProvider(create: (_) => ChatViewModel(apiClient)),
       ],
       child: const ZieSocialApp(),
     ),
@@ -57,11 +53,9 @@ class ZieSocialApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'ZieSocial',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-        ), //[cite: 2]
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const LoginView(), //[cite: 2]
+      home: const LoginView(),
     );
   }
 }

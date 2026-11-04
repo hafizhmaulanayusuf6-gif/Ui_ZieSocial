@@ -8,6 +8,8 @@ import 'package:ziesocial/views/follow_list_view.dart';
 import 'package:ziesocial/views/home_view.dart';
 import 'package:ziesocial/views/login_view.dart';
 import 'package:ziesocial/views/saved_posts_view.dart';
+import 'package:ziesocial/viewmodel/chat_viewmodel.dart';
+import 'package:ziesocial/views/chat_detail_view.dart';
 
 const _primaryColor = Color(0xFF4F46E5);
 const _pageColor = Color(0xFFF8F9FC);
@@ -22,12 +24,8 @@ class ProfileView extends StatefulWidget {
   final int? profileUserId;
   final String? username;
 
-  const ProfileView({
-    super.key,
-    int? userId,
-    int? profileUserId,
-    this.username,
-  }) : profileUserId = profileUserId ?? userId;
+  const ProfileView({super.key, int? userId, int? profileUserId, this.username})
+    : profileUserId = profileUserId ?? userId;
 
   @override
   State<ProfileView> createState() => _ProfileViewState();
@@ -61,14 +59,12 @@ class _ProfileViewState extends State<ProfileView> {
     if (!mounted) return;
     final futures = <Future>[
       context.read<ProfileViewModel>().fetchProfile(
-            profileId: _targetProfileId,
-            viewerId: _currentUserId,
-          ),
+        profileId: _targetProfileId,
+        viewerId: _currentUserId,
+      ),
       // Juga muat jumlah postingan tersimpan jika melihat profil sendiri
       if (_targetProfileId == _currentUserId)
-        context
-            .read<PostViewModel>()
-            .fetchSavedPosts(userId: _currentUserId),
+        context.read<PostViewModel>().fetchSavedPosts(userId: _currentUserId),
     ];
     await Future.wait(futures);
   }
@@ -113,23 +109,18 @@ class _ProfileViewState extends State<ProfileView> {
                 SliverToBoxAdapter(
                   child: _buildProfileHeader(context, vm.profile!),
                 ),
-                SliverToBoxAdapter(
-                  child: _buildPostsHeader(vm.profile!),
-                ),
+                SliverToBoxAdapter(child: _buildPostsHeader(vm.profile!)),
                 if (vm.profile!.posts.isEmpty)
                   SliverToBoxAdapter(child: _buildEmptyPosts())
                 else
                   SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final post = vm.profile!.posts[index];
-                        return PostCard(
-                          key: ValueKey('profile_post_${post.id}'),
-                          post: post,
-                        );
-                      },
-                      childCount: vm.profile!.posts.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final post = vm.profile!.posts[index];
+                      return PostCard(
+                        key: ValueKey('profile_post_${post.id}'),
+                        post: post,
+                      );
+                    }, childCount: vm.profile!.posts.length),
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 32)),
               ],
@@ -145,13 +136,13 @@ class _ProfileViewState extends State<ProfileView> {
     final profileUser = context.watch<ProfileViewModel>().profile;
     final title = _isOwnProfile
         ? (loginUser?.username.isNotEmpty == true
-            ? loginUser!.username
-            : 'Profil')
+              ? loginUser!.username
+              : 'Profil')
         : (widget.username?.isNotEmpty == true
-            ? widget.username!
-            : (profileUser?.username.isNotEmpty == true
-                ? profileUser!.username
-                : 'Profil'));
+              ? widget.username!
+              : (profileUser?.username.isNotEmpty == true
+                    ? profileUser!.username
+                    : 'Profil'));
 
     return AppBar(
       backgroundColor: Colors.white,
@@ -187,10 +178,7 @@ class _ProfileViewState extends State<ProfileView> {
           ),
           PopupMenuButton<String>(
             tooltip: 'Menu akun',
-            icon: const Icon(
-              Icons.more_vert_rounded,
-              color: Color(0xFF374151),
-            ),
+            icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF374151)),
             onSelected: (val) {
               if (val == 'logout') _logout();
             },
@@ -236,10 +224,7 @@ class _ProfileViewState extends State<ProfileView> {
                     )
                   : null,
               border: (!profile.isFollowing && !_isOwnProfile)
-                  ? Border.all(
-                      color: const Color(0xFFE5E7EB),
-                      width: 2,
-                    )
+                  ? Border.all(color: const Color(0xFFE5E7EB), width: 2)
                   : null,
             ),
             child: Container(
@@ -349,11 +334,24 @@ class _ProfileViewState extends State<ProfileView> {
 
           const SizedBox(height: 18),
 
-          // Tombol Follow / Unfollow (hanya tampil jika bukan profil sendiri)
+          // Tombol Follow / Unfollow & Pesan (hanya tampil jika bukan profil sendiri)
           if (!_isOwnProfile)
-            _FollowButton(
-              profile: profile,
-              currentUserId: _currentUserId,
+            Row(
+              children: [
+                Expanded(
+                  child: _FollowButton(
+                    profile: profile,
+                    currentUserId: _currentUserId,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _MessageButton(
+                    profile: profile,
+                    currentUserId: _currentUserId,
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -474,11 +472,7 @@ class _StatItem extends StatelessWidget {
   final int count;
   final VoidCallback? onTap;
 
-  const _StatItem({
-    required this.label,
-    required this.count,
-    this.onTap,
-  });
+  const _StatItem({required this.label, required this.count, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -503,12 +497,8 @@ class _StatItem extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: onTap != null
-                  ? _primaryColor
-                  : const Color(0xFF6B7280),
-              fontWeight: onTap != null
-                  ? FontWeight.w600
-                  : FontWeight.w400,
+              color: onTap != null ? _primaryColor : const Color(0xFF6B7280),
+              fontWeight: onTap != null ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
         ],
@@ -526,11 +516,7 @@ class _StatItem extends StatelessWidget {
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 36,
-      width: 1,
-      color: const Color(0xFFE5E7EB),
-    );
+    return Container(height: 36, width: 1, color: const Color(0xFFE5E7EB));
   }
 }
 
@@ -541,17 +527,13 @@ class _FollowButton extends StatelessWidget {
   final UserProfileModel profile;
   final int currentUserId;
 
-  const _FollowButton({
-    required this.profile,
-    required this.currentUserId,
-  });
+  const _FollowButton({required this.profile, required this.currentUserId});
 
   Future<void> _toggle(BuildContext context) async {
-    final success =
-        await context.read<ProfileViewModel>().toggleFollow(
-              followerId: currentUserId,
-              followingId: profile.id,
-            );
+    final success = await context.read<ProfileViewModel>().toggleFollow(
+      followerId: currentUserId,
+      followingId: profile.id,
+    );
 
     if (!context.mounted) return;
 
@@ -559,9 +541,7 @@ class _FollowButton extends StatelessWidget {
       final err = context.read<ProfileViewModel>().errorMessage ?? '';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            err.isEmpty ? 'Gagal memperbarui status follow.' : err,
-          ),
+          content: Text(err.isEmpty ? 'Gagal memperbarui status follow.' : err),
         ),
       );
     }
@@ -583,9 +563,7 @@ class _FollowButton extends StatelessWidget {
               color: isFollowing ? Colors.white : _primaryColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isFollowing
-                    ? const Color(0xFFD1D5DB)
-                    : _primaryColor,
+                color: isFollowing ? const Color(0xFFD1D5DB) : _primaryColor,
                 width: 1.5,
               ),
               boxShadow: isFollowing
@@ -610,9 +588,7 @@ class _FollowButton extends StatelessWidget {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: isFollowing
-                                ? _primaryColor
-                                : Colors.white,
+                            color: isFollowing ? _primaryColor : Colors.white,
                           ),
                         )
                       : Row(
@@ -646,6 +622,79 @@ class _FollowButton extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _MessageButton extends StatefulWidget {
+  final UserProfileModel profile;
+  final int currentUserId;
+
+  const _MessageButton({required this.profile, required this.currentUserId});
+
+  @override
+  State<_MessageButton> createState() => _MessageButtonState();
+}
+
+class _MessageButtonState extends State<_MessageButton> {
+  bool _isLoading = false;
+
+  Future<void> _openChat() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    final chatVm = context.read<ChatViewModel>();
+    final conversation = await chatVm.getOrCreateConversation(
+      userId: widget.currentUserId,
+      targetUserId: widget.profile.id,
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (conversation != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatDetailView(
+            conversationId: conversation.conversationId,
+            peer: conversation.peer,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal membuka percakapan.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFD1D5DB), width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF111827),
+        ),
+        onPressed: _isLoading ? null : _openChat,
+        icon: _isLoading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+        label: const Text(
+          'Pesan',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+      ),
     );
   }
 }

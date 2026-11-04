@@ -39,7 +39,11 @@ class _SavedPostsViewState extends State<SavedPostsView> {
         elevation: 0.5,
         titleSpacing: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1F2937), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF1F2937),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -59,7 +63,8 @@ class _SavedPostsViewState extends State<SavedPostsView> {
             );
           }
 
-          if (viewModel.savedErrorMessage != null && viewModel.savedPosts.isEmpty) {
+          if (viewModel.savedErrorMessage != null &&
+              viewModel.savedPosts.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -74,13 +79,19 @@ class _SavedPostsViewState extends State<SavedPostsView> {
                     const SizedBox(height: 12),
                     const Text(
                       'Gagal memuat postingan tersimpan',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       viewModel.savedErrorMessage!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
@@ -165,10 +176,7 @@ class _SavedPostsViewState extends State<SavedPostsView> {
               itemCount: viewModel.savedPosts.length,
               itemBuilder: (context, index) {
                 final post = viewModel.savedPosts[index];
-                return PostCard(
-                  key: ValueKey('saved_${post.id}'),
-                  post: post,
-                );
+                return PostCard(key: ValueKey('saved_${post.id}'), post: post);
               },
             ),
           );

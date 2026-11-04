@@ -13,6 +13,8 @@ import 'package:lottie/lottie.dart';
 import 'package:ziesocial/viewmodel/profile_viewmodel.dart';
 import 'package:ziesocial/views/profile_view.dart';
 import 'package:ziesocial/views/saved_posts_view.dart';
+import 'package:ziesocial/views/search_view.dart';
+import 'package:ziesocial/views/conversations_view.dart';
 
 const _primaryColor = Color(0xFF4F46E5);
 const _pageColor = Color(0xFFF8F9FC);
@@ -203,6 +205,20 @@ class _HomeHeader extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SavedPostsView()),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Pesan',
+            icon: const Icon(
+              Icons.chat_bubble_outline_rounded,
+              color: _primaryColor,
+              size: 24,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ConversationsView()),
               );
             },
           ),
@@ -506,8 +522,10 @@ class _PostCardState extends State<PostCard> {
 
     if (success && mounted) {
       try {
-        final newLikes =
-            (widget.post.likesCount + (willLike ? 1 : -1)).clamp(0, 999999);
+        final newLikes = (widget.post.likesCount + (willLike ? 1 : -1)).clamp(
+          0,
+          999999,
+        );
         context.read<ProfileViewModel>().syncPostLike(
           postId: widget.post.id,
           isLiked: willLike,
@@ -904,7 +922,7 @@ class _PostCardState extends State<PostCard> {
             child: GestureDetector(
               onTap: _openComments,
               child: Text(
-                '${post.likesCount} likes • ${post.commentsCount} comments',
+                '${post.likesCount} likes Ã¢â‚¬Â¢ ${post.commentsCount} comments',
                 style: const TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
@@ -969,19 +987,36 @@ class _ActionIcon extends StatelessWidget {
   }
 }
 
-class _HomeBottomNavigation extends StatelessWidget {
+class _HomeBottomNavigation extends StatefulWidget {
   const _HomeBottomNavigation();
+
+  @override
+  State<_HomeBottomNavigation> createState() => _HomeBottomNavigationState();
+}
+
+class _HomeBottomNavigationState extends State<_HomeBottomNavigation> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      currentIndex: 0,
-      onTap: (index) {
+      currentIndex: _currentIndex,
+      onTap: (index) async {
+        if (index == _currentIndex && index == 0) return;
+        setState(() => _currentIndex = index);
+
         if (index == 1) {
-          Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ProfileView()),
           );
+          if (mounted) setState(() => _currentIndex = 0);
+        } else if (index == 2) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SearchView()),
+          );
+          if (mounted) setState(() => _currentIndex = 0);
         }
       },
       type: BottomNavigationBarType.fixed,

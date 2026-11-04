@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ziesocial/model/user_profile_model.dart';
 import 'package:ziesocial/viewmodel/login_viewmodel.dart';
 import 'package:ziesocial/viewmodel/profile_viewmodel.dart';
+import 'package:ziesocial/views/profile_view.dart';
 
 const _primaryColor = Color(0xFF4F46E5);
 const _pageColor = Color(0xFFF8F9FC);
@@ -40,10 +41,10 @@ class _FollowListViewState extends State<FollowListView> {
     final currentUserId =
         int.tryParse(context.read<LoginViewModel>().user?.id ?? '') ?? 0;
     await context.read<ProfileViewModel>().fetchFollowList(
-          userId: widget.profileUserId,
-          viewerId: currentUserId,
-          type: widget.type,
-        );
+      userId: widget.profileUserId,
+      viewerId: currentUserId,
+      type: widget.type,
+    );
   }
 
   @override
@@ -176,7 +177,7 @@ class _FollowListViewState extends State<FollowListView> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _UserListTile extends StatelessWidget {
   final UserSummaryModel user;
 
@@ -190,9 +191,9 @@ class _UserListTile extends StatelessWidget {
     if (currentUserId == user.id) return;
 
     await context.read<ProfileViewModel>().toggleFollowInList(
-          currentUserId: currentUserId,
-          targetUserId: user.id,
-        );
+      currentUserId: currentUserId,
+      targetUserId: user.id,
+    );
   }
 
   @override
@@ -203,6 +204,15 @@ class _UserListTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                ProfileView(profileUserId: user.id, username: user.username),
+          ),
+        );
+      },
       leading: CircleAvatar(
         radius: 24,
         backgroundColor: const Color(0xFFE9EDF5),
@@ -224,10 +234,7 @@ class _UserListTile extends StatelessWidget {
       subtitle: user.name.isNotEmpty
           ? Text(
               user.name,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
-              ),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
             )
           : null,
       trailing: isSelf
@@ -235,10 +242,7 @@ class _UserListTile extends StatelessWidget {
           : Consumer<ProfileViewModel>(
               builder: (context, vm, _) {
                 final isFollowing = vm.followList
-                    .firstWhere(
-                      (u) => u.id == user.id,
-                      orElse: () => user,
-                    )
+                    .firstWhere((u) => u.id == user.id, orElse: () => user)
                     .isFollowing;
 
                 return GestureDetector(
@@ -263,8 +267,9 @@ class _UserListTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color:
-                            isFollowing ? const Color(0xFF374151) : Colors.white,
+                        color: isFollowing
+                            ? const Color(0xFF374151)
+                            : Colors.white,
                       ),
                     ),
                   ),

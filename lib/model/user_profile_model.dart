@@ -86,10 +86,8 @@ class UserProfileModel {
       ),
       bio: (userJson['bio'] ?? '').toString(),
       postsCount: int.tryParse('${userJson['posts_count'] ?? 0}') ?? 0,
-      followersCount:
-          int.tryParse('${userJson['followers_count'] ?? 0}') ?? 0,
-      followingCount:
-          int.tryParse('${userJson['following_count'] ?? 0}') ?? 0,
+      followersCount: int.tryParse('${userJson['followers_count'] ?? 0}') ?? 0,
+      followingCount: int.tryParse('${userJson['following_count'] ?? 0}') ?? 0,
       isFollowing:
           userJson['is_following'] == true ||
           userJson['is_following'] == 1 ||

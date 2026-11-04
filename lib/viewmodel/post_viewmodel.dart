@@ -121,8 +121,9 @@ class PostViewModel extends ChangeNotifier {
     _postsBeingSaved.add(postId);
 
     try {
-      final endpoint =
-          willSave ? ApiConstants.savePost : ApiConstants.unsavePost;
+      final endpoint = willSave
+          ? ApiConstants.savePost
+          : ApiConstants.unsavePost;
 
       final response = await _apiClient.post(
         endpoint,
@@ -141,8 +142,7 @@ class PostViewModel extends ChangeNotifier {
 
       if (newIsSaved) {
         if (savedIndex == -1) {
-          final postToSave =
-              postIndex != -1 ? _posts[postIndex] : targetPost;
+          final postToSave = postIndex != -1 ? _posts[postIndex] : targetPost;
           _savedPosts.insert(0, postToSave.copyWith(isSaved: true));
         } else {
           _savedPosts[savedIndex] = _savedPosts[savedIndex].copyWith(
@@ -198,9 +198,9 @@ class PostViewModel extends ChangeNotifier {
           response['is_liked'] == 1 ||
           response['is_liked'] == '1';
 
-      final newLikesCount = int.tryParse(
-        '${response['like_count'] ?? post.likesCount}',
-      ) ?? (post.likesCount + (newIsLiked ? 1 : -1)).clamp(0, 999999);
+      final newLikesCount =
+          int.tryParse('${response['like_count'] ?? post.likesCount}') ??
+          (post.likesCount + (newIsLiked ? 1 : -1)).clamp(0, 999999);
 
       if (index != -1) {
         _posts[index] = _posts[index].copyWith(
@@ -251,8 +251,9 @@ class PostViewModel extends ChangeNotifier {
         _posts[index] = _posts[index].copyWith(caption: updatedCaption);
       }
       if (savedIndex != -1) {
-        _savedPosts[savedIndex] =
-            _savedPosts[savedIndex].copyWith(caption: updatedCaption);
+        _savedPosts[savedIndex] = _savedPosts[savedIndex].copyWith(
+          caption: updatedCaption,
+        );
       }
 
       _errorMessage = null;
@@ -298,8 +299,9 @@ class PostViewModel extends ChangeNotifier {
     if (savedIndex != -1) {
       final currentCount = _savedPosts[savedIndex].commentsCount;
       final newCount = (currentCount + delta) < 0 ? 0 : currentCount + delta;
-      _savedPosts[savedIndex] =
-          _savedPosts[savedIndex].copyWith(commentsCount: newCount);
+      _savedPosts[savedIndex] = _savedPosts[savedIndex].copyWith(
+        commentsCount: newCount,
+      );
     }
 
     notifyListeners();
