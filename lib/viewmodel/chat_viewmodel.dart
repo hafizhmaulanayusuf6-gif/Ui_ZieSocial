@@ -120,6 +120,7 @@ class ChatViewModel extends ChangeNotifier {
     required int conversationId,
     required int senderId,
     required String message,
+    int? replyToMessageId,
   }) async {
     final cleanMessage = message.trim();
     if (cleanMessage.isEmpty || _isSending) return false;
@@ -128,14 +129,16 @@ class ChatViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _apiClient.post(
-        ApiConstants.chatSend,
-        body: {
-          'conversation_id': conversationId,
-          'sender_id': senderId,
-          'message': cleanMessage,
-        },
-      );
+      final Map<String, dynamic> body = {
+        'conversation_id': conversationId,
+        'sender_id': senderId,
+        'message': cleanMessage,
+      };
+      if (replyToMessageId != null && replyToMessageId > 0) {
+        body['reply_to_message_id'] = replyToMessageId;
+      }
+
+      final res = await _apiClient.post(ApiConstants.chatSend, body: body);
 
       if (res['data'] != null) {
         final sent = ChatMessageModel.fromJson(

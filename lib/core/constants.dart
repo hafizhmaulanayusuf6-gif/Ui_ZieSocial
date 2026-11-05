@@ -40,6 +40,10 @@ class ApiConstants {
   static String get chatSend => '$baseUrl/chat/send.php';
   static String get chatAuthChannel => '$baseUrl/chat/auth_channel.php';
 
+  // FCM Device Tokens Endpoints
+  static String get deviceRegisterToken => '$baseUrl/device/register_token.php';
+  static String get deviceRemoveToken => '$baseUrl/device/remove_token.php';
+
   // Pusher Client Configuration
   static const String pusherAppKey = '7773b9e0277a3e998164';
   static const String pusherCluster = 'ap1';

@@ -73,10 +73,46 @@ class ConversationModel {
   }
 }
 
+class RepliedMessageSnippet {
+  final int id;
+  final int senderId;
+  final String senderName;
+  final String message;
+
+  const RepliedMessageSnippet({
+    required this.id,
+    required this.senderId,
+    required this.senderName,
+    required this.message,
+  });
+
+  factory RepliedMessageSnippet.fromJson(Map<String, dynamic> json) {
+    return RepliedMessageSnippet(
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      senderId: json['sender_id'] is int
+          ? json['sender_id']
+          : int.tryParse(json['sender_id']?.toString() ?? '0') ?? 0,
+      senderName: json['sender_name']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'sender_id': senderId,
+    'sender_name': senderName,
+    'message': message,
+  };
+}
+
 class ChatMessageModel {
   final int id;
   final int conversationId;
   final int senderId;
+  final int? replyToMessageId;
+  final RepliedMessageSnippet? replyMessage;
   final String message;
   final String createdAt;
 
@@ -84,11 +120,14 @@ class ChatMessageModel {
     required this.id,
     required this.conversationId,
     required this.senderId,
+    this.replyToMessageId,
+    this.replyMessage,
     required this.message,
     required this.createdAt,
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
+    final rawReply = json['reply_message'];
     return ChatMessageModel(
       id: json['id'] is int
           ? json['id']
@@ -99,6 +138,18 @@ class ChatMessageModel {
       senderId: json['sender_id'] is int
           ? json['sender_id']
           : int.tryParse(json['sender_id']?.toString() ?? '0') ?? 0,
+      replyToMessageId: json['reply_to_message_id'] != null
+          ? (json['reply_to_message_id'] is int
+                ? json['reply_to_message_id']
+                : int.tryParse(json['reply_to_message_id']?.toString() ?? ''))
+          : null,
+      replyMessage: rawReply is Map<String, dynamic>
+          ? RepliedMessageSnippet.fromJson(rawReply)
+          : (rawReply is Map
+                ? RepliedMessageSnippet.fromJson(
+                    Map<String, dynamic>.from(rawReply),
+                  )
+                : null),
       message: json['message']?.toString() ?? '',
       createdAt: json['created_at']?.toString() ?? '',
     );
@@ -108,6 +159,8 @@ class ChatMessageModel {
     'id': id,
     'conversation_id': conversationId,
     'sender_id': senderId,
+    'reply_to_message_id': replyToMessageId,
+    'reply_message': replyMessage?.toJson(),
     'message': message,
     'created_at': createdAt,
   };

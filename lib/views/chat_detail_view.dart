@@ -23,9 +23,11 @@ class ChatDetailView extends StatefulWidget {
 class _ChatDetailViewState extends State<ChatDetailView> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
   final PusherService _pusherService = PusherService();
 
   int _currentUserId = 0;
+  ChatMessageModel? _replyingTo;
 
   @override
   void initState() {
@@ -59,6 +61,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     _pusherService.unsubscribeFromConversation(widget.conversationId);
     _textController.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -86,13 +89,20 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     final text = _textController.text.trim();
     if (text.isEmpty || _currentUserId < 1) return;
 
+    final targetReply = _replyingTo;
     _textController.clear();
+    if (_replyingTo != null) {
+      setState(() {
+        _replyingTo = null;
+      });
+    }
 
     final chatVm = context.read<ChatViewModel>();
     final success = await chatVm.sendMessage(
       conversationId: widget.conversationId,
       senderId: _currentUserId,
       message: text,
+      replyToMessageId: targetReply?.id,
     );
 
     if (success) {
@@ -102,6 +112,13 @@ class _ChatDetailViewState extends State<ChatDetailView> {
         context,
       ).showSnackBar(SnackBar(content: Text(chatVm.messagesError!)));
     }
+  }
+
+  void _setReplyTarget(ChatMessageModel message) {
+    setState(() {
+      _replyingTo = message;
+    });
+    _focusNode.requestFocus();
   }
 
   String _formatTime(String raw) {
@@ -262,58 +279,147 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                     final msg = vm.messages[index];
                     final isMe = msg.senderId == _currentUserId;
 
-                    return Align(
-                      alignment: isMe
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.75,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isMe ? primaryColor : Colors.white,
-                          borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(16),
-                            topRight: const Radius.circular(16),
-                            bottomLeft: Radius.circular(isMe ? 16 : 4),
-                            bottomRight: Radius.circular(isMe ? 4 : 16),
+                    return Dismissible(
+                      key: ValueKey('msg_${msg.id}_$index'),
+                      direction: DismissDirection.startToEnd,
+                      confirmDismiss: (direction) async {
+                        _setReplyTarget(msg);
+                        return false;
+                      },
+                      background: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          child: const Icon(
+                            Icons.reply_rounded,
+                            color: primaryColor,
+                            size: 20,
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: isMe
-                              ? CrossAxisAlignment.end
-                              : CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              msg.message,
-                              style: TextStyle(
-                                color: isMe ? Colors.white : Colors.black87,
-                                fontSize: 14.5,
-                              ),
+                      ),
+                      child: Align(
+                        alignment: isMe
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMe ? primaryColor : Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(isMe ? 16 : 4),
+                              bottomRight: Radius.circular(isMe ? 4 : 16),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatTime(msg.createdAt),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isMe
-                                    ? Colors.white.withValues(alpha: 0.7)
-                                    : Colors.black38,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: isMe
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              // Preview Pesan Asli jika ini adalah pesan balasan (Reply)
+                              if (msg.replyMessage != null) ...[
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? Colors.black.withValues(alpha: 0.15)
+                                        : const Color(0xFFF1F2F6),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border(
+                                      left: BorderSide(
+                                        color: isMe
+                                            ? Colors.white
+                                            : primaryColor,
+                                        width: 3.5,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        msg.replyMessage!.senderId ==
+                                                _currentUserId
+                                            ? 'Anda'
+                                            : (msg
+                                                      .replyMessage!
+                                                      .senderName
+                                                      .isNotEmpty
+                                                  ? msg.replyMessage!.senderName
+                                                  : widget.peer.name),
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isMe
+                                              ? Colors.white
+                                              : primaryColor,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        msg.replyMessage!.message,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isMe
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.85,
+                                                )
+                                              : Colors.black87,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              Text(
+                                msg.message,
+                                style: TextStyle(
+                                  color: isMe ? Colors.white : Colors.black87,
+                                  fontSize: 14.5,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatTime(msg.createdAt),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isMe
+                                      ? Colors.white.withValues(alpha: 0.7)
+                                      : Colors.black38,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -322,6 +428,9 @@ class _ChatDetailViewState extends State<ChatDetailView> {
               },
             ),
           ),
+          // Bar Preview Balasan (ketika user melakukan swipe-to-reply)
+          if (_replyingTo != null) _buildReplyPreviewBar(primaryColor),
+          // Input Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: const BoxDecoration(
@@ -341,6 +450,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: TextField(
                         controller: _textController,
+                        focusNode: _focusNode,
                         minLines: 1,
                         maxLines: 4,
                         textInputAction: TextInputAction.send,
@@ -382,6 +492,82 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplyPreviewBar(Color primaryColor) {
+    if (_replyingTo == null) return const SizedBox.shrink();
+    final isMyMessage = _replyingTo!.senderId == _currentUserId;
+    final senderName = isMyMessage
+        ? 'Anda'
+        : (widget.peer.name.isNotEmpty
+              ? widget.peer.name
+              : widget.peer.username);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF1F2F6),
+        border: Border(
+          top: BorderSide(color: Color(0xFFE2E8F0)),
+          bottom: BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 3.5,
+            height: 36,
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Icon(Icons.reply_rounded, color: primaryColor, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Membalas $senderName',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: primaryColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _replyingTo!.message,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: Colors.black54,
+            ),
+            onPressed: () {
+              setState(() {
+                _replyingTo = null;
+              });
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            tooltip: 'Batalkan reply',
           ),
         ],
       ),

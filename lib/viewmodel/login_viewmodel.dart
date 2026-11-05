@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:ziesocial/core/constants.dart';
+import 'package:ziesocial/core/fcm_service.dart';
 import 'package:ziesocial/core/network.dart';
 import 'package:ziesocial/model/user_model.dart';
 
@@ -28,6 +29,12 @@ class LoginViewModel extends ChangeNotifier {
         body: {'email': email, 'password': password},
       );
       _user = UserModel.fromJson(response['user']);
+
+      final uid = int.tryParse(_user?.id ?? '0') ?? 0;
+      if (uid > 0) {
+        FcmService().onUserLogin(uid);
+      }
+
       return true;
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -39,6 +46,10 @@ class LoginViewModel extends ChangeNotifier {
   }
 
   void logout() {
+    final uid = int.tryParse(_user?.id ?? '0') ?? 0;
+    if (uid > 0) {
+      FcmService().onUserLogout(uid);
+    }
     _user = null;
 
     notifyListeners();
