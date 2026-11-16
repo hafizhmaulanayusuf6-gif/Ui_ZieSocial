@@ -1,8 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:ziesocial/model/story_model.dart';
 import 'package:ziesocial/viewmodel/login_viewmodel.dart';
+import 'package:ziesocial/viewmodel/story_viewmodel.dart';
 import 'package:ziesocial/views/create_post_view.dart';
+import 'package:ziesocial/views/create_story_view.dart';
 import 'package:ziesocial/views/login_view.dart';
+import 'package:ziesocial/views/story_viewer_view.dart';
 
 import 'package:ziesocial/model/comment_model.dart';
 import 'package:ziesocial/model/post_model.dart';
@@ -43,6 +49,7 @@ class _HomeViewState extends State<HomeView> {
       }
 
       context.read<PostViewModel>().fetchPosts(userId: userId);
+      context.read<StoryViewModel>().fetchStories(userId: userId);
     });
   }
 
@@ -278,32 +285,118 @@ class StoriesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 112,
-      padding: const EdgeInsets.only(top: 12, bottom: 10),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFEDEEF2))),
-      ),
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        scrollDirection: Axis.horizontal,
-        itemCount: _mockStories.length + 1,
-        separatorBuilder: (_, _) => const SizedBox(width: 13),
-        itemBuilder: (context, index) {
-          if (index == 0) return const _YourStory();
-          return _StoryItem(story: _mockStories[index - 1]);
-        },
-      ),
+    return Consumer<StoryViewModel>(
+      builder: (context, storyVm, child) {
+        final followingStories = storyVm.followingStories;
+        final myStory = storyVm.myStory;
+        final allGroups = storyVm.allGroups;
+
+        return Container(
+          height: 112,
+          padding: const EdgeInsets.only(top: 12, bottom: 10),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Color(0xFFEDEEF2))),
+          ),
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            scrollDirection: Axis.horizontal,
+            itemCount: followingStories.length + 1,
+            separatorBuilder: (_, _) => const SizedBox(width: 13),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return _YourStory(myStory: myStory, allGroups: allGroups);
+              }
+
+              final group = followingStories[index - 1];
+              final groupIndexInAll = allGroups.indexOf(group);
+
+              return _StoryItem(
+                group: group,
+                onTap: () {
+                  if (allGroups.isNotEmpty && groupIndexInAll != -1) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StoryViewerView(
+                          storyGroups: allGroups,
+                          initialGroupIndex: groupIndexInAll,
+                        ),
+                      ),
+                    );
+                  }
+                },
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
 
 class _YourStory extends StatelessWidget {
-  const _YourStory();
+  final StoryGroupModel? myStory;
+  final List<StoryGroupModel> allGroups;
+
+  const _YourStory({this.myStory, required this.allGroups});
+
+  Future<void> _pickImage(BuildContext context) async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 90,
+    );
+
+    if (image == null) return;
+
+    final file = File(image.path);
+    final fileSize = await file.length();
+
+    if (fileSize > 5 * 1024 * 1024) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ukuran gambar maksimal 5MB.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final ext = image.path.split('.').last.toLowerCase();
+    const allowedExtensions = ['jpg', 'jpeg', 'png'];
+    if (!allowedExtensions.contains(ext)) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Format tidak didukung. Gunakan gambar JPG atau PNG.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CreateStoryView(initialImage: file)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final loggedInUser = context.watch<LoginViewModel>().user;
+    final hasActiveStories = myStory != null && myStory!.stories.isNotEmpty;
+
+    String avatarUrl = '';
+    if (hasActiveStories && myStory!.avatarUrl.isNotEmpty) {
+      avatarUrl = myStory!.avatarUrl;
+    } else if (loggedInUser != null && loggedInUser.avatar.isNotEmpty) {
+      avatarUrl = StoryItemModel.resolveStoryUrl(loggedInUser.avatar);
+    }
+
     return SizedBox(
       width: 54,
       child: Column(
@@ -311,34 +404,82 @@ class _YourStory extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFE0E3EA),
-                    width: 1.5,
+              GestureDetector(
+                onTap: () {
+                  if (hasActiveStories) {
+                    final myGroupIndex = allGroups.indexOf(myStory!);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StoryViewerView(
+                          storyGroups: allGroups,
+                          initialGroupIndex: myGroupIndex != -1
+                              ? myGroupIndex
+                              : 0,
+                        ),
+                      ),
+                    );
+                  } else {
+                    _pickImage(context);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(2.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: hasActiveStories
+                        ? const LinearGradient(
+                            colors: [
+                              _primaryColor,
+                              Color(0xFF9B5DE5),
+                              Color(0xFFFFA45B),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    border: !hasActiveStories
+                        ? Border.all(color: const Color(0xFFE0E3EA), width: 1.5)
+                        : null,
                   ),
-                ),
-                child: const CircleAvatar(
-                  radius: 23,
-                  backgroundImage: NetworkImage(
-                    'https://i.pravatar.cc/120?img=12',
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: CircleAvatar(
+                      radius: 21,
+                      backgroundColor: const Color(0xFFEEF0F5),
+                      backgroundImage: avatarUrl.isNotEmpty
+                          ? NetworkImage(avatarUrl)
+                          : null,
+                      child: avatarUrl.isEmpty
+                          ? const Icon(
+                              Icons.person,
+                              color: Color(0xFF9CA3AF),
+                              size: 24,
+                            )
+                          : null,
+                    ),
                   ),
                 ),
               ),
               Positioned(
                 right: -1,
                 bottom: -1,
-                child: Container(
-                  width: 19,
-                  height: 19,
-                  decoration: BoxDecoration(
-                    color: _primaryColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                child: GestureDetector(
+                  onTap: () => _pickImage(context),
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: _primaryColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(Icons.add, size: 13, color: Colors.white),
                   ),
-                  child: const Icon(Icons.add, size: 14, color: Colors.white),
                 ),
               ),
             ],
@@ -361,50 +502,77 @@ class _YourStory extends StatelessWidget {
 }
 
 class _StoryItem extends StatelessWidget {
-  final StoryData story;
+  final StoryGroupModel group;
+  final VoidCallback onTap;
 
-  const _StoryItem({required this.story});
+  const _StoryItem({required this.group, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 54,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(2.5),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [_primaryColor, Color(0xFF9B5DE5), Color(0xFFFFA45B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+    final isUnviewed = !group.allViewed;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 54,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2.5),
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                gradient: isUnviewed
+                    ? const LinearGradient(
+                        colors: [
+                          _primaryColor,
+                          Color(0xFF9B5DE5),
+                          Color(0xFFFFA45B),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                border: !isUnviewed
+                    ? Border.all(color: const Color(0xFFE0E3EA), width: 1.5)
+                    : null,
               ),
-              child: CircleAvatar(
-                radius: 21,
-                backgroundImage: NetworkImage(story.avatarUrl),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: CircleAvatar(
+                  radius: 21,
+                  backgroundColor: const Color(0xFFEEF0F5),
+                  backgroundImage: group.avatarUrl.isNotEmpty
+                      ? NetworkImage(group.avatarUrl)
+                      : null,
+                  child: group.avatarUrl.isEmpty
+                      ? const Icon(
+                          Icons.person,
+                          color: Color(0xFF9CA3AF),
+                          size: 24,
+                        )
+                      : null,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            story.username,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF454956),
+            const SizedBox(height: 6),
+            Text(
+              group.username.isNotEmpty ? group.username : group.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: isUnviewed ? FontWeight.w600 : FontWeight.w500,
+                color: isUnviewed
+                    ? const Color(0xFF1F2937)
+                    : const Color(0xFF6B7280),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1126,28 +1294,6 @@ class _HomeBottomNavigationState extends State<_HomeBottomNavigation> {
     );
   }
 }
-
-class StoryData {
-  final String username;
-  final String avatarUrl;
-
-  const StoryData({required this.username, required this.avatarUrl});
-}
-
-// Data contoh dipisahkan dari widget agar mudah diganti dengan data API nanti.
-const List<StoryData> _mockStories = [
-  StoryData(username: 'sarah.j', avatarUrl: 'https://i.pravatar.cc/120?img=47'),
-  StoryData(
-    username: 'mike_dev',
-    avatarUrl: 'https://i.pravatar.cc/120?img=12',
-  ),
-  StoryData(username: 'art.flow', avatarUrl: 'https://i.pravatar.cc/120?img=5'),
-  StoryData(username: 'doggo', avatarUrl: 'https://i.pravatar.cc/120?img=11'),
-  StoryData(
-    username: 'nina.jpg',
-    avatarUrl: 'https://i.pravatar.cc/120?img=44',
-  ),
-];
 
 class CommentsBottomSheet extends StatefulWidget {
   final PostModel post;

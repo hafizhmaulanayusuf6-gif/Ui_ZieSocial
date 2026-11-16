@@ -44,6 +44,12 @@ class ApiConstants {
   static String get deviceRegisterToken => '$baseUrl/device/register_token.php';
   static String get deviceRemoveToken => '$baseUrl/device/remove_token.php';
 
+  // Stories
+  static String get storyCreate => '$baseUrl/stories/create.php';
+  static String get storyFeed => '$baseUrl/stories/feed.php';
+  static String get storyView => '$baseUrl/stories/view.php';
+  static String get storyDelete => '$baseUrl/stories/delete.php';
+
   // Pusher Client Configuration
   static const String pusherAppKey = '7773b9e0277a3e998164';
   static const String pusherCluster = 'ap1';

@@ -11,6 +11,7 @@ import 'package:ziesocial/viewmodel/post_viewmodel.dart';
 import 'package:ziesocial/viewmodel/profile_viewmodel.dart';
 import 'package:ziesocial/viewmodel/register_viewmodel.dart';
 import 'package:ziesocial/viewmodel/search_viewmodel.dart';
+import 'package:ziesocial/viewmodel/story_viewmodel.dart';
 import 'package:ziesocial/views/login_view.dart';
 
 // untuk sertifikat di hp
@@ -39,6 +40,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ProfileViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => SearchViewModel(apiClient)),
         ChangeNotifierProvider(create: (_) => ChatViewModel(apiClient)),
+        ChangeNotifierProvider(create: (_) => StoryViewModel(apiClient)),
       ],
       child: const ZieSocialApp(),
     ),
