@@ -14,7 +14,9 @@ const _pageColor = Color(0xFFF8F9FC);
 /// Pengguna dapat mencari akun berdasarkan username atau nama,
 /// lalu mengetuk hasil untuk membuka profil pengguna tersebut.
 class SearchView extends StatefulWidget {
-  const SearchView({super.key});
+  final bool isTab;
+
+  const SearchView({super.key, this.isTab = false});
 
   @override
   State<SearchView> createState() => _SearchViewState();
@@ -37,8 +39,10 @@ class _SearchViewState extends State<SearchView> {
   @override
   void dispose() {
     _controller.dispose();
-    // Bersihkan state pencarian saat halaman ditutup
-    context.read<SearchViewModel>().clearSearch();
+    if (!widget.isTab) {
+      // Bersihkan state pencarian saat halaman pop ditutup
+      context.read<SearchViewModel>().clearSearch();
+    }
     super.dispose();
   }
 
@@ -61,14 +65,17 @@ class _SearchViewState extends State<SearchView> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFF1F2937),
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: !widget.isTab,
+        leading: widget.isTab
+            ? null
+            : IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Color(0xFF1F2937),
+                  size: 20,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
         title: const Text(
           'Cari Pengguna',
           style: TextStyle(
@@ -86,7 +93,7 @@ class _SearchViewState extends State<SearchView> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: TextField(
               controller: _controller,
-              autofocus: true,
+              autofocus: !widget.isTab,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: 'Cari username atau nama...',
@@ -177,7 +184,10 @@ class _SearchViewState extends State<SearchView> {
 
                 // Daftar hasil
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.only(
+                    top: 8,
+                    bottom: widget.isTab ? 92 : 8,
+                  ),
                   itemCount: vm.results.length,
                   separatorBuilder: (_, _) => const Divider(
                     height: 1,

@@ -12,7 +12,20 @@
           "package_name": "com.ziesocial.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "291873220440-utepta2iti1ddrs1lq3qv57s6d0gokjc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ziesocial.app",
+            "certificate_hash": "5dff12ee290e083f193261e43e57e031fe7f6d93"
+          }
+        },
+        {
+          "client_id": "291873220440-4ramvj4q7t4o81e0g3npd80oubb7mfb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBzIlQpEUj4u52QxNmtRTza3pweu8fGibs"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "291873220440-4ramvj4q7t4o81e0g3npd80oubb7mfb1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

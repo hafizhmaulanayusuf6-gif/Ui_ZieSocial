@@ -25,17 +25,24 @@ class SearchViewModel extends ChangeNotifier {
 
   // Token untuk mencegah hasil request lama menimpa hasil terbaru
   int _requestToken = 0;
+  bool _isDisposed = false;
 
   List<UserSummaryModel> get results => _results;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get currentKeyword => _currentKeyword;
 
+  /// Membuat instance terpisah dengan [ApiClient] yang sama
+  /// agar fitur modal/bottom sheet tidak mengubah state tab Search global.
+  SearchViewModel createScopedCopy() => SearchViewModel(_apiClient);
+
   // ─── Public API ───────────────────────────────────────────────────────
 
   /// Dipanggil setiap kali TextField berubah.
   /// Menerapkan debounce 400 ms sebelum mengirim request.
   void onKeywordChanged(String keyword, {required int viewerId}) {
+    if (_isDisposed) return;
+
     _currentKeyword = keyword.trim();
 
     _debounce?.cancel();
@@ -56,6 +63,8 @@ class SearchViewModel extends ChangeNotifier {
 
   /// Bersihkan semua state (misalnya saat halaman di-dispose).
   void clearSearch() {
+    if (_isDisposed) return;
+
     _debounce?.cancel();
     _results = [];
     _errorMessage = null;
@@ -68,6 +77,8 @@ class SearchViewModel extends ChangeNotifier {
   // ─── Private ─────────────────────────────────────────────────────────
 
   Future<void> _search({required String keyword, required int viewerId}) async {
+    if (_isDisposed) return;
+
     // Token baru untuk membatalkan hasil request sebelumnya jika sudah
     // ada request baru yang lebih relevan
     final token = ++_requestToken;
@@ -84,8 +95,8 @@ class SearchViewModel extends ChangeNotifier {
 
       final response = await _apiClient.get(url);
 
-      // Abaikan jika sudah ada request yang lebih baru
-      if (token != _requestToken) return;
+      // Abaikan jika sudah di-dispose atau ada request yang lebih baru
+      if (_isDisposed || token != _requestToken) return;
 
       final raw = response['data'];
       if (raw is! List) {
@@ -100,11 +111,11 @@ class SearchViewModel extends ChangeNotifier {
             .toList();
       }
     } catch (e) {
-      if (token != _requestToken) return;
+      if (_isDisposed || token != _requestToken) return;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _results = [];
     } finally {
-      if (token == _requestToken) {
+      if (!_isDisposed && token == _requestToken) {
         _isLoading = false;
         notifyListeners();
       }
@@ -113,6 +124,8 @@ class SearchViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _requestToken++;
     _debounce?.cancel();
     super.dispose();
   }

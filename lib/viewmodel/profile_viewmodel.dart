@@ -8,7 +8,7 @@ class ProfileViewModel extends ChangeNotifier {
 
   ProfileViewModel(this._apiClient);
 
-  // ─── State profil ────────────────────────────────────────────────────
+  // ─── State profil (untuk halaman profil yang di-push) ─────────────────
   UserProfileModel? _profile;
   bool _isLoading = false;
   String? _errorMessage;
@@ -16,6 +16,15 @@ class ProfileViewModel extends ChangeNotifier {
   UserProfileModel? get profile => _profile;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  // ─── State profil milik sendiri (terisolasi untuk tab Profile utama) ──
+  UserProfileModel? _ownProfile;
+  bool _isLoadingOwnProfile = false;
+  String? _ownProfileError;
+
+  UserProfileModel? get ownProfile => _ownProfile;
+  bool get isLoadingOwnProfile => _isLoadingOwnProfile;
+  String? get ownProfileError => _ownProfileError;
 
   // ─── State daftar followers / following ──────────────────────────────
   List<UserSummaryModel> _followList = [];
@@ -50,10 +59,53 @@ class ProfileViewModel extends ChangeNotifier {
       );
 
       _profile = UserProfileModel.fromJson(Map<String, dynamic>.from(response));
+      if (profileId == viewerId) {
+        _ownProfile = _profile;
+      }
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Ambil profil milik pengguna yang sedang login untuk tab Profile utama.
+  Future<void> fetchOwnProfile({
+    required int userId,
+    bool silent = false,
+  }) async {
+    if (userId < 1) return;
+
+    if (_ownProfile != null && _ownProfile!.id != userId) {
+      _ownProfile = null;
+    }
+
+    if (!silent) {
+      _isLoadingOwnProfile = true;
+      _ownProfileError = null;
+      notifyListeners();
+    }
+
+    try {
+      final response = await _apiClient.get(
+        '${ApiConstants.userProfile}?profile_id=$userId&viewer_id=$userId',
+      );
+
+      _ownProfile = UserProfileModel.fromJson(
+        Map<String, dynamic>.from(response),
+      );
+      if (_profile != null && _profile!.id == userId) {
+        _profile = _ownProfile;
+      }
+    } catch (e) {
+      if (!silent) {
+        _ownProfileError = e.toString().replaceFirst('Exception: ', '');
+      }
+    } finally {
+      if (!silent) {
+        _isLoadingOwnProfile = false;
+      }
       notifyListeners();
     }
   }
@@ -214,31 +266,141 @@ class ProfileViewModel extends ChangeNotifier {
     required bool isLiked,
     required int likesCount,
   }) {
-    if (_profile == null) return;
-    final updatedPosts = _profile!.posts.map((p) {
-      if (p.id == postId) {
-        return p.copyWith(isLiked: isLiked, likesCount: likesCount);
-      }
-      return p;
-    }).toList();
-    _profile = _profile!.copyWith(posts: updatedPosts);
-    notifyListeners();
+    var changed = false;
+    if (_profile != null) {
+      final updatedPosts = _profile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          return p.copyWith(isLiked: isLiked, likesCount: likesCount);
+        }
+        return p;
+      }).toList();
+      _profile = _profile!.copyWith(posts: updatedPosts);
+    }
+    if (_ownProfile != null) {
+      final updatedOwnPosts = _ownProfile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          return p.copyWith(isLiked: isLiked, likesCount: likesCount);
+        }
+        return p;
+      }).toList();
+      _ownProfile = _ownProfile!.copyWith(posts: updatedOwnPosts);
+    }
+    if (changed) notifyListeners();
   }
 
   /// Sinkronkan status simpan postingan di halaman profil
   void syncPostSave({required int postId, required bool isSaved}) {
-    if (_profile == null) return;
-    final updatedPosts = _profile!.posts.map((p) {
-      if (p.id == postId) {
-        return p.copyWith(isSaved: isSaved);
-      }
-      return p;
-    }).toList();
-    _profile = _profile!.copyWith(posts: updatedPosts);
-    notifyListeners();
+    var changed = false;
+    if (_profile != null) {
+      final updatedPosts = _profile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          return p.copyWith(isSaved: isSaved);
+        }
+        return p;
+      }).toList();
+      _profile = _profile!.copyWith(posts: updatedPosts);
+    }
+    if (_ownProfile != null) {
+      final updatedOwnPosts = _ownProfile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          return p.copyWith(isSaved: isSaved);
+        }
+        return p;
+      }).toList();
+      _ownProfile = _ownProfile!.copyWith(posts: updatedOwnPosts);
+    }
+    if (changed) notifyListeners();
   }
 
-  /// Reset state profil (saat berpindah ke profil lain).
+  /// Sinkronkan caption postingan yang baru diperbarui di halaman profil
+  void syncPostCaption({required int postId, required String caption}) {
+    var changed = false;
+    if (_profile != null) {
+      final updatedPosts = _profile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          return p.copyWith(caption: caption);
+        }
+        return p;
+      }).toList();
+      _profile = _profile!.copyWith(posts: updatedPosts);
+    }
+    if (_ownProfile != null) {
+      final updatedOwnPosts = _ownProfile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          return p.copyWith(caption: caption);
+        }
+        return p;
+      }).toList();
+      _ownProfile = _ownProfile!.copyWith(posts: updatedOwnPosts);
+    }
+    if (changed) notifyListeners();
+  }
+
+  /// Sinkronkan jumlah komentar postingan di halaman profil
+  void syncPostCommentCount({required int postId, required int delta}) {
+    var changed = false;
+    if (_profile != null) {
+      final updatedPosts = _profile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          final nextCount = (p.commentsCount + delta).clamp(0, 999999);
+          return p.copyWith(commentsCount: nextCount);
+        }
+        return p;
+      }).toList();
+      _profile = _profile!.copyWith(posts: updatedPosts);
+    }
+    if (_ownProfile != null) {
+      final updatedOwnPosts = _ownProfile!.posts.map((p) {
+        if (p.id == postId) {
+          changed = true;
+          final nextCount = (p.commentsCount + delta).clamp(0, 999999);
+          return p.copyWith(commentsCount: nextCount);
+        }
+        return p;
+      }).toList();
+      _ownProfile = _ownProfile!.copyWith(posts: updatedOwnPosts);
+    }
+    if (changed) notifyListeners();
+  }
+
+  /// Sinkronkan penghapusan postingan di halaman profil
+  void syncPostDeleted({required int postId}) {
+    var changed = false;
+    if (_profile != null) {
+      final filtered = _profile!.posts.where((p) => p.id != postId).toList();
+      if (filtered.length != _profile!.posts.length) {
+        changed = true;
+        final nextCount = (_profile!.postsCount - 1).clamp(0, 999999);
+        _profile = _profile!.copyWith(
+          posts: filtered,
+          postsCount: nextCount,
+        );
+      }
+    }
+    if (_ownProfile != null) {
+      final filtered = _ownProfile!.posts
+          .where((p) => p.id != postId)
+          .toList();
+      if (filtered.length != _ownProfile!.posts.length) {
+        changed = true;
+        final nextCount = (_ownProfile!.postsCount - 1).clamp(0, 999999);
+        _ownProfile = _ownProfile!.copyWith(
+          posts: filtered,
+          postsCount: nextCount,
+        );
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
+  /// Reset state profil yang sedang di-push (tidak menghapus _ownProfile).
   void resetProfile() {
     _profile = null;
     _errorMessage = null;
@@ -246,5 +408,13 @@ class ProfileViewModel extends ChangeNotifier {
     _followList = [];
     _followListError = null;
     _isLoadingFollowList = false;
+  }
+
+  /// Reset seluruh state profil termasuk _ownProfile (misal saat logout).
+  void clearAll() {
+    resetProfile();
+    _ownProfile = null;
+    _ownProfileError = null;
+    _isLoadingOwnProfile = false;
   }
 }

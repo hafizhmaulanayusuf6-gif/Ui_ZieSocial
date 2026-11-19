@@ -1,292 +1,297 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; //[cite: 1]
+import 'package:provider/provider.dart';
 import 'package:ziesocial/viewmodel/login_viewmodel.dart';
+import 'package:ziesocial/views/main_navigation_shell.dart';
 import 'package:ziesocial/views/register_view.dart';
-import 'home_view.dart';
-
-// Sesuaikan import di bawah ini sesuai lokasi LoginViewModel di project Anda
-// import 'package:ziesocial/viewmodel/login_viewmodel.dart';
+import 'package:ziesocial/widget/auth_components.dart';
 
 class LoginView extends StatefulWidget {
-  //[cite: 1]
   const LoginView({super.key});
 
   @override
-  State<LoginView> createState() => _LoginViewState(); //[cite: 1]
+  State<LoginView> createState() => _LoginViewState();
 }
 
 class _LoginViewState extends State<LoginView> {
-  final _emailController = TextEditingController(); //[cite: 1]
-  final _passwordController = TextEditingController(); //[cite: 1]
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
-    _emailController.dispose(); //[cite: 1]
-    _passwordController.dispose(); //[cite: 1]
-    super.dispose(); //[cite: 1]
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  bool _validateInputs() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    String? nextEmailError;
+    String? nextPasswordError;
+
+    if (email.isEmpty) {
+      nextEmailError = 'Email wajib diisi.';
+    }
+    if (password.isEmpty) {
+      nextPasswordError = 'Password wajib diisi.';
+    }
+
+    setState(() {
+      _emailError = nextEmailError;
+      _passwordError = nextPasswordError;
+    });
+
+    return nextEmailError == null && nextPasswordError == null;
   }
 
   Future<void> _login() async {
-    //[cite: 1]
-    final email = _emailController.text.trim(); //[cite: 1]
-    final password = _passwordController.text; //[cite: 1]
+    FocusScope.of(context).unfocus();
+    if (!_validateInputs()) return;
 
-    if (email.isEmpty || password.isEmpty) {
-      //[cite: 1]
-      ScaffoldMessenger.of(context).showSnackBar(
-        //[cite: 1]
-        const SnackBar(
-          content: Text('Email dan password wajib diisi.'), //[cite: 1]
-        ),
-      );
-      return; //[cite: 1]
-    }
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
-    // Memanggil LoginViewModel via Provider[cite: 1]
     final success = await context.read<LoginViewModel>().login(
       email: email,
       password: password,
-    ); //[cite: 1]
+    );
 
-    if (!mounted) return; //[cite: 1]
+    if (!mounted) return;
 
     if (success) {
-      //[cite: 1]
       Navigator.pushReplacement(
-        //[cite: 1]
         context,
-        MaterialPageRoute(
-          builder: (context) => const HomeView(), //[cite: 1]
-        ),
+        MaterialPageRoute(builder: (context) => const MainNavigationShell()),
       );
     } else {
-      final errorMessage = context
-          .read<LoginViewModel>()
-          .errorMessage; //[cite: 1]
-      ScaffoldMessenger.of(context).showSnackBar(
-        //[cite: 1]
-        SnackBar(
-          content: Text(errorMessage ?? 'Login gagal.'), //[cite: 1]
+      final errorMessage = context.read<LoginViewModel>().errorMessage;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            backgroundColor: ZieAuthColors.error,
+            content: Text(errorMessage ?? 'Login gagal.'),
+          ),
+        );
+    }
+  }
+
+  void _onForgotPassword() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Fitur lupa kata sandi belum tersedia saat ini.'),
         ),
       );
+  }
+
+  Future<void> _loginWithGoogle() async {
+    FocusScope.of(context).unfocus();
+
+    final loginVm = context.read<LoginViewModel>();
+    final success = await loginVm.loginWithGoogle();
+
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainNavigationShell()),
+      );
+    } else if (!loginVm.wasGoogleCancelled) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            backgroundColor: ZieAuthColors.error,
+            content: Text(loginVm.errorMessage ?? 'Login dengan Google gagal.'),
+          ),
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Memantau status loading dari LoginViewModel[cite: 1]
-    final isLoading = context.watch<LoginViewModel>().isLoading; //[cite: 1]
+    final loginVm = context.watch<LoginViewModel>();
+    final isLoading = loginVm.isLoading;
+    final isGoogleLoading = loginVm.isGoogleLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: ZieAuthColors.background,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(maxWidth: 400),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: (constraints.maxHeight - 48).clamp(
+                    0.0,
+                    double.infinity,
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Text(
-                      'ZieSocial',
-                      style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF4B4BD8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Text(
-                      'Welcome back. Please enter your details.',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-
-                  const Text(
-                    'Email',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 5),
-
-                  TextField(
-                    controller:
-                        _emailController, // Menambahkan controller[cite: 1]
-                    keyboardType: TextInputType
-                        .emailAddress, // Menambahkan tipe input[cite: 1]
-                    decoration: InputDecoration(
-                      hintText: 'Enter Your Email',
-                      hintStyle: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade400,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.email_outlined,
-                        size: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF4F4F6),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFF4B4BD8)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  const Text(
-                    'Password',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 5),
-
-                  TextField(
-                    controller:
-                        _passwordController, // Menambahkan controller[cite: 1]
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      hintText: '••••••••',
-                      hintStyle: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade400,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.lock_outline, // Mengganti ikon agar lebih sesuai
-                        size: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF4F4F6),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: const BorderSide(color: Color(0xFF4B4BD8)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF4B4BD8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 38,
-                    child: ElevatedButton(
-                      // Memanggil fungsi _login dan menampilkan indikator saat loading[cite: 1]
-                      onPressed: isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4B4BD8),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  Divider(color: Colors.grey.shade200, thickness: 1),
-                  const SizedBox(height: 14),
-
-                  Center(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterView(),
-                          ),
-                        );
-                      },
-                      child: RichText(
-                        text: TextSpan(
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Sign In',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade600,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            color: ZieAuthColors.textPrimary,
+                            letterSpacing: -0.4,
                           ),
-                          children: const [
-                            TextSpan(text: "Don't have an account? "),
-                            TextSpan(
-                              text: 'Create an account',
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Hi! Welcome back, you've been missed",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: ZieAuthColors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 36),
+
+                        AuthTextField(
+                          controller: _emailController,
+                          label: 'Email',
+                          hintText: 'example@gmail.com',
+                          prefixIcon: Icons.mail_outline_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          enabled: !isLoading,
+                          errorText: _emailError,
+                          onChanged: (_) {
+                            if (_emailError != null) {
+                              setState(() => _emailError = null);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        AuthTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          hintText: '••••••••••••',
+                          prefixIcon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          enabled: !isLoading,
+                          errorText: _passwordError,
+                          onChanged: (_) {
+                            if (_passwordError != null) {
+                              setState(() => _passwordError = null);
+                            }
+                          },
+                          onSubmitted: (_) {
+                            if (!isLoading) _login();
+                          },
+                        ),
+                        const SizedBox(height: 8),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: isLoading ? null : _onForgotPassword,
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              foregroundColor: ZieAuthColors.primary,
+                            ),
+                            child: const Text(
+                              'Forgot Password?',
                               style: TextStyle(
-                                color: Color(0xFF4B4BD8),
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                                decorationColor: ZieAuthColors.primary,
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 12),
+
+                        AuthPrimaryButton(
+                          label: 'Sign In',
+                          onPressed: isLoading ? null : _login,
+                          isLoading: isLoading && !isGoogleLoading,
+                        ),
+                        const SizedBox(height: 28),
+
+                        const AuthDivider(text: 'Or sign in with'),
+                        const SizedBox(height: 24),
+
+                        AuthGoogleButton(
+                          onPressed: isLoading ? null : _loginWithGoogle,
+                          isLoading: isGoogleLoading,
+                        ),
+                        const SizedBox(height: 28),
+
+                        Center(
+                          child: TextButton(
+                            onPressed: isLoading
+                                ? null
+                                : () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const RegisterView(),
+                                      ),
+                                    );
+                                  },
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                            ),
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: const TextSpan(
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: ZieAuthColors.textSecondary,
+                                ),
+                                children: [
+                                  TextSpan(text: "Don't have an account? "),
+                                  TextSpan(
+                                    text: 'Sign Up',
+                                    style: TextStyle(
+                                      color: ZieAuthColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: ZieAuthColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

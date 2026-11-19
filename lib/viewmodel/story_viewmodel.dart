@@ -179,6 +179,70 @@ class StoryViewModel extends ChangeNotifier {
     }
   }
 
+  // --- Realtime Pusher Handlers ---
+
+  void handleRealtimeStoryCreated(Map<String, dynamic> data) {
+    try {
+      final storyMap = data['story'] is Map
+          ? Map<String, dynamic>.from(data['story'] as Map)
+          : data;
+      final storyItem = StoryItemModel.fromJson(storyMap);
+      final userId =
+          int.tryParse('${data['user_id'] ?? storyItem.userId}') ?? 0;
+
+      if (_myStory != null && _myStory!.userId == userId) {
+        if (!_myStory!.stories.any((s) => s.id == storyItem.id)) {
+          final updated = List<StoryItemModel>.from(_myStory!.stories)
+            ..add(storyItem);
+          _myStory = _myStory!.copyWith(stories: updated);
+          notifyListeners();
+        }
+        return;
+      }
+
+      final fIndex = _followingStories.indexWhere((g) => g.userId == userId);
+      if (fIndex != -1) {
+        final group = _followingStories[fIndex];
+        if (!group.stories.any((s) => s.id == storyItem.id)) {
+          final updated = List<StoryItemModel>.from(group.stories)
+            ..add(storyItem);
+          _followingStories[fIndex] = group.copyWith(
+            stories: updated,
+            allViewed: false,
+          );
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to handle realtime story-created: $e');
+    }
+  }
+
+  void handleRealtimeStoryDeleted(int storyId, int userId) {
+    if (_myStory != null && _myStory!.userId == userId) {
+      final remaining = _myStory!.stories
+          .where((s) => s.id != storyId)
+          .toList();
+      _myStory = remaining.isEmpty
+          ? null
+          : _myStory!.copyWith(stories: remaining);
+      notifyListeners();
+      return;
+    }
+
+    final fIndex = _followingStories.indexWhere((g) => g.userId == userId);
+    if (fIndex != -1) {
+      final group = _followingStories[fIndex];
+      final remaining = group.stories.where((s) => s.id != storyId).toList();
+      if (remaining.isEmpty) {
+        _followingStories.removeAt(fIndex);
+      } else {
+        _followingStories[fIndex] = group.copyWith(stories: remaining);
+      }
+      notifyListeners();
+    }
+  }
+
   String _getReadableErrorMessage(dynamic error) {
     final raw = error.toString().replaceFirst('Exception: ', '').trim();
     if (raw.toLowerCase().contains('connection') ||
