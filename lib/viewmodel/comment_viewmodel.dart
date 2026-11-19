@@ -99,6 +99,33 @@ class CommentViewModel extends ChangeNotifier {
     }
   }
 
+  // --- Realtime Pusher Handlers ---
+
+  void handleRealtimeCommentCreated(
+    int postId,
+    Map<String, dynamic> commentData,
+    int commentCount,
+  ) {
+    try {
+      final comment = CommentModel.fromJson(commentData);
+      if (!_comments.any((c) => c.id == comment.id)) {
+        _comments.add(comment);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Failed to handle realtime comment-created: $e');
+    }
+  }
+
+  void handleRealtimeCommentDeleted(
+    int postId,
+    int commentId,
+    int commentCount,
+  ) {
+    _comments.removeWhere((c) => c.id == commentId);
+    notifyListeners();
+  }
+
   void clear() {
     _comments = [];
     _errorMessage = null;

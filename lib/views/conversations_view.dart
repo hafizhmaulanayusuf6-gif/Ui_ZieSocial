@@ -6,18 +6,22 @@ import 'package:ziesocial/viewmodel/login_viewmodel.dart';
 import 'package:ziesocial/views/chat_detail_view.dart';
 
 class ConversationsView extends StatefulWidget {
-  const ConversationsView({super.key});
+  final bool isTab;
+
+  const ConversationsView({super.key, this.isTab = false});
 
   @override
   State<ConversationsView> createState() => _ConversationsViewState();
 }
 
-class _ConversationsViewState extends State<ConversationsView> {
+class _ConversationsViewState extends State<ConversationsView>
+    with WidgetsBindingObserver {
   int _currentUserId = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<LoginViewModel>().user;
       final uid = int.tryParse(user?.id ?? '0') ?? 0;
@@ -27,6 +31,19 @@ class _ConversationsViewState extends State<ConversationsView> {
         context.read<ChatViewModel>().fetchConversations(userId: uid);
       }
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _currentUserId > 0) {
+      _refresh();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -62,6 +79,7 @@ class _ConversationsViewState extends State<ConversationsView> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
+        automaticallyImplyLeading: !widget.isTab,
         title: const Text(
           'Pesan',
           style: TextStyle(
@@ -70,10 +88,12 @@ class _ConversationsViewState extends State<ConversationsView> {
             fontSize: 20,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: widget.isTab
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                onPressed: () => Navigator.pop(context),
+              ),
       ),
       body: Consumer<ChatViewModel>(
         builder: (context, vm, _) {
@@ -167,6 +187,9 @@ class _ConversationsViewState extends State<ConversationsView> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView.separated(
+              padding: widget.isTab
+                  ? const EdgeInsets.only(bottom: 92)
+                  : EdgeInsets.zero,
               itemCount: vm.conversations.length,
               separatorBuilder: (_, _) => const Divider(
                 height: 1,
@@ -176,48 +199,101 @@ class _ConversationsViewState extends State<ConversationsView> {
               itemBuilder: (context, index) {
                 final conv = vm.conversations[index];
                 final peer = conv.peer;
+                final isOnline = vm.isPeerOnline(conv.conversationId, peer.id);
+                final isTyping = vm.isPeerTyping(conv.conversationId, peer.id);
 
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 4,
                   ),
-                  leading: CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color(0xFFE2E8F0),
-                    backgroundImage:
-                        peer.avatar != null && peer.avatar!.isNotEmpty
-                        ? NetworkImage(
-                            '${ApiConstants.serverRoot}/${peer.avatar}',
-                          )
-                        : null,
-                    child: peer.avatar == null || peer.avatar!.isEmpty
-                        ? Text(
-                            peer.name.isNotEmpty
-                                ? peer.name[0].toUpperCase()
-                                : (peer.username.isNotEmpty
-                                      ? peer.username[0].toUpperCase()
-                                      : '?'),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                              fontSize: 18,
+                  leading: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(0xFFE2E8F0),
+                        backgroundImage:
+                            peer.avatar != null && peer.avatar!.isNotEmpty
+                            ? NetworkImage(
+                                '${ApiConstants.serverRoot}/${peer.avatar}',
+                              )
+                            : null,
+                        child: peer.avatar == null || peer.avatar!.isEmpty
+                            ? Text(
+                                peer.name.isNotEmpty
+                                    ? peer.name[0].toUpperCase()
+                                    : (peer.username.isNotEmpty
+                                          ? peer.username[0].toUpperCase()
+                                          : '?'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
+                                  fontSize: 18,
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (isOnline)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2.5,
+                              ),
                             ),
-                          )
-                        : null,
+                          ),
+                        ),
+                    ],
                   ),
                   title: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(
-                          peer.name.isNotEmpty ? peer.name : peer.username,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                peer.name.isNotEmpty
+                                    ? peer.name
+                                    : peer.username,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isOnline) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text(
+                                  'Online',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       Text(
@@ -229,17 +305,29 @@ class _ConversationsViewState extends State<ConversationsView> {
                       ),
                     ],
                   ),
-                  subtitle: Text(
-                    conv.lastMessage ?? 'Memulai percakapan',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: conv.lastMessage != null
-                          ? Colors.black54
-                          : Colors.grey,
-                    ),
-                  ),
+                  subtitle: isTyping
+                      ? const Text(
+                          'Mengetik...',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: primaryColor,
+                            fontWeight: FontWeight.w500,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
+                      : Text(
+                          conv.lastMessage ?? 'Memulai percakapan',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: conv.lastMessage != null
+                                ? Colors.black54
+                                : Colors.grey,
+                          ),
+                        ),
                   onTap: () async {
                     await Navigator.push(
                       context,

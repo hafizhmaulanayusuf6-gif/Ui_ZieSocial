@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ziesocial/viewmodel/login_viewmodel.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
-import 'package:ziesocial/views/home_view.dart';
+import 'package:ziesocial/widget/post_card.dart';
 
 const _primaryColor = Color(0xFF4F46E5);
 const _pageColor = Color(0xFFF8F9FC);

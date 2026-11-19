@@ -26,6 +26,7 @@ class _StoryViewerViewState extends State<StoryViewerView>
 
   late List<StoryGroupModel> _groups;
   bool _isPaused = false;
+  bool _isImageLoaded = false;
   double _dragStartY = 0;
 
   StoryGroupModel? get _currentGroup {
@@ -74,6 +75,7 @@ class _StoryViewerViewState extends State<StoryViewerView>
 
   @override
   void dispose() {
+    _progressController.stop();
     _progressController.dispose();
     super.dispose();
   }
@@ -86,9 +88,9 @@ class _StoryViewerViewState extends State<StoryViewerView>
       return;
     }
 
+    _isImageLoaded = false;
     _progressController.stop();
     _progressController.reset();
-    _progressController.forward();
 
     // Catat status view ke backend
     final currentUserId = int.tryParse(
@@ -101,6 +103,30 @@ class _StoryViewerViewState extends State<StoryViewerView>
         ownerId: group.userId,
       );
     }
+  }
+
+  void _onImageLoaded(int storyId) {
+    if (!mounted || storyId != _currentStory?.id) return;
+    if (_isImageLoaded) return;
+
+    setState(() {
+      _isImageLoaded = true;
+    });
+
+    if (!_isPaused) {
+      _progressController.stop();
+      _progressController.reset();
+      _progressController.forward();
+    }
+  }
+
+  void _onImageError(int storyId) {
+    if (!mounted || storyId != _currentStory?.id) return;
+
+    setState(() {
+      _isImageLoaded = false;
+    });
+    _progressController.stop();
   }
 
   void _nextStory() {
@@ -143,7 +169,6 @@ class _StoryViewerViewState extends State<StoryViewerView>
         });
         _startCurrentStory();
       } else {
-        // Ulangi story pertama
         _startCurrentStory();
       }
     }
@@ -152,14 +177,18 @@ class _StoryViewerViewState extends State<StoryViewerView>
   void _pauseProgress() {
     if (!_isPaused) {
       _isPaused = true;
-      _progressController.stop();
+      if (_isImageLoaded) {
+        _progressController.stop();
+      }
     }
   }
 
   void _resumeProgress() {
     if (_isPaused) {
       _isPaused = false;
-      _progressController.forward();
+      if (_isImageLoaded) {
+        _progressController.forward();
+      }
     }
   }
 
@@ -222,13 +251,11 @@ class _StoryViewerViewState extends State<StoryViewerView>
         ),
       );
 
-      // Perbarui list lokal stories pada grup saat ini
       final updatedStories = group.stories
           .where((s) => s.id != story.id)
           .toList();
 
       if (updatedStories.isEmpty) {
-        // Hapus grup ini dari tampilan jika sudah tidak ada story
         _groups.removeAt(_currentGroupIndex);
         if (_groups.isEmpty) {
           Navigator.pop(context);
@@ -310,22 +337,34 @@ class _StoryViewerViewState extends State<StoryViewerView>
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Gambar Story
+              // Gambar Story dengan penanganan loading & frameBuilder
               Center(
                 child: Image.network(
                   story.mediaUrl,
+                  key: ValueKey('story_${story.id}'),
                   fit: BoxFit.contain,
                   width: double.infinity,
                   height: double.infinity,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    );
-                  },
+                  frameBuilder:
+                      (context, child, frame, wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded || frame != null) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _onImageLoaded(story.id);
+                          });
+                          return child;
+                        }
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        );
+                      },
                   errorBuilder: (context, error, stackTrace) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _onImageError(story.id);
+                    });
                     return const Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -394,7 +433,9 @@ class _StoryViewerViewState extends State<StoryViewerView>
                                 if (index < _currentStoryIndex) {
                                   fill = 1.0;
                                 } else if (index == _currentStoryIndex) {
-                                  fill = _progressController.value;
+                                  fill = _isImageLoaded
+                                      ? _progressController.value
+                                      : 0.0;
                                 } else {
                                   fill = 0.0;
                                 }

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:ziesocial/model/post_model.dart';
 import 'package:ziesocial/model/user_profile_model.dart';
 import 'package:ziesocial/viewmodel/login_viewmodel.dart';
 import 'package:ziesocial/viewmodel/post_viewmodel.dart';
 import 'package:ziesocial/viewmodel/profile_viewmodel.dart';
 import 'package:ziesocial/views/follow_list_view.dart';
-import 'package:ziesocial/views/home_view.dart';
 import 'package:ziesocial/views/login_view.dart';
+import 'package:ziesocial/views/post_detail_view.dart';
 import 'package:ziesocial/views/saved_posts_view.dart';
 import 'package:ziesocial/viewmodel/chat_viewmodel.dart';
 import 'package:ziesocial/views/chat_detail_view.dart';
@@ -23,9 +24,15 @@ const _pageColor = Color(0xFFF8F9FC);
 class ProfileView extends StatefulWidget {
   final int? profileUserId;
   final String? username;
+  final bool isTab;
 
-  const ProfileView({super.key, int? userId, int? profileUserId, this.username})
-    : profileUserId = profileUserId ?? userId;
+  const ProfileView({
+    super.key,
+    int? userId,
+    int? profileUserId,
+    this.username,
+    this.isTab = false,
+  }) : profileUserId = profileUserId ?? userId;
 
   @override
   State<ProfileView> createState() => _ProfileViewState();
@@ -45,31 +52,48 @@ class _ProfileViewState extends State<ProfileView> {
     if (!mounted) return;
     _currentUserId =
         int.tryParse(context.read<LoginViewModel>().user?.id ?? '') ?? 0;
-    _targetProfileId = widget.profileUserId ?? _currentUserId;
+    _targetProfileId = widget.isTab
+        ? _currentUserId
+        : (widget.profileUserId ?? _currentUserId);
 
     if (_targetProfileId < 1) return;
 
-    // Reset agar tidak tampil profil lama
-    context.read<ProfileViewModel>().resetProfile();
+    final profileVm = context.read<ProfileViewModel>();
+
+    if (widget.isTab) {
+      if (profileVm.ownProfile == null ||
+          profileVm.ownProfile!.id != _currentUserId) {
+        await _loadAll();
+      }
+      return;
+    }
+
+    // Reset agar tidak tampil profil lama pada halaman push
+    profileVm.resetProfile();
 
     await _loadAll();
   }
 
   Future<void> _loadAll() async {
     if (!mounted) return;
+    final profileVm = context.read<ProfileViewModel>();
     final futures = <Future>[
-      context.read<ProfileViewModel>().fetchProfile(
-        profileId: _targetProfileId,
-        viewerId: _currentUserId,
-      ),
+      if (widget.isTab)
+        profileVm.fetchOwnProfile(userId: _currentUserId)
+      else
+        profileVm.fetchProfile(
+          profileId: _targetProfileId,
+          viewerId: _currentUserId,
+        ),
       // Juga muat jumlah postingan tersimpan jika melihat profil sendiri
-      if (_targetProfileId == _currentUserId)
+      if (widget.isTab || _targetProfileId == _currentUserId)
         context.read<PostViewModel>().fetchSavedPosts(userId: _currentUserId),
     ];
     await Future.wait(futures);
   }
 
   void _logout() {
+    context.read<ProfileViewModel>().clearAll();
     context.read<LoginViewModel>().logout();
     Navigator.pushAndRemoveUntil(
       context,
@@ -78,7 +102,19 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  bool get _isOwnProfile => _targetProfileId == _currentUserId;
+  void _openPostDetail(PostModel post) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PostDetailView(
+          initialPost: post,
+          isFromOwnProfileTab: widget.isTab,
+        ),
+      ),
+    );
+  }
+
+  bool get _isOwnProfile => widget.isTab || _targetProfileId == _currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -87,17 +123,23 @@ class _ProfileViewState extends State<ProfileView> {
       appBar: _buildAppBar(),
       body: Consumer<ProfileViewModel>(
         builder: (context, vm, _) {
-          if (vm.isLoading && vm.profile == null) {
+          final isLoading = widget.isTab ? vm.isLoadingOwnProfile : vm.isLoading;
+          final errorMessage = widget.isTab
+              ? vm.ownProfileError
+              : vm.errorMessage;
+          final profile = widget.isTab ? vm.ownProfile : vm.profile;
+
+          if (isLoading && profile == null) {
             return const Center(
               child: CircularProgressIndicator(color: _primaryColor),
             );
           }
 
-          if (vm.errorMessage != null && vm.profile == null) {
-            return _buildError(vm.errorMessage!);
+          if (errorMessage != null && profile == null) {
+            return _buildError(errorMessage);
           }
 
-          if (vm.profile == null) {
+          if (profile == null) {
             return const Center(child: Text('Profil tidak tersedia.'));
           }
 
@@ -107,22 +149,32 @@ class _ProfileViewState extends State<ProfileView> {
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
-                  child: _buildProfileHeader(context, vm.profile!),
+                  child: _buildProfileHeader(context, profile),
                 ),
-                SliverToBoxAdapter(child: _buildPostsHeader(vm.profile!)),
-                if (vm.profile!.posts.isEmpty)
+                SliverToBoxAdapter(child: _buildPostsHeader(profile)),
+                if (profile.posts.isEmpty)
                   SliverToBoxAdapter(child: _buildEmptyPosts())
                 else
-                  SliverList(
+                  SliverGrid(
                     delegate: SliverChildBuilderDelegate((context, index) {
-                      final post = vm.profile!.posts[index];
-                      return PostCard(
-                        key: ValueKey('profile_post_${post.id}'),
+                      final post = profile.posts[index];
+                      return _ProfilePostGridItem(
+                        key: ValueKey('profile_grid_${post.id}'),
                         post: post,
+                        onTap: () => _openPostDetail(post),
                       );
-                    }, childCount: vm.profile!.posts.length),
+                    }, childCount: profile.posts.length),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                          childAspectRatio: 1,
+                        ),
                   ),
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                SliverToBoxAdapter(
+                  child: SizedBox(height: widget.isTab ? 92 : 32),
+                ),
               ],
             ),
           );
@@ -133,7 +185,8 @@ class _ProfileViewState extends State<ProfileView> {
 
   PreferredSizeWidget _buildAppBar() {
     final loginUser = context.watch<LoginViewModel>().user;
-    final profileUser = context.watch<ProfileViewModel>().profile;
+    final profileVm = context.watch<ProfileViewModel>();
+    final profileUser = widget.isTab ? profileVm.ownProfile : profileVm.profile;
     final title = _isOwnProfile
         ? (loginUser?.username.isNotEmpty == true
               ? loginUser!.username
@@ -147,14 +200,17 @@ class _ProfileViewState extends State<ProfileView> {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0.5,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Color(0xFF1F2937),
-          size: 20,
-        ),
-        onPressed: () => Navigator.pop(context),
-      ),
+      automaticallyImplyLeading: !widget.isTab,
+      leading: widget.isTab
+          ? null
+          : IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF1F2937),
+                size: 20,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
       title: Text(
         title,
         style: const TextStyle(
@@ -694,6 +750,53 @@ class _MessageButtonState extends State<_MessageButton> {
           'Pesan',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
+      ),
+    );
+  }
+}
+
+class _ProfilePostGridItem extends StatelessWidget {
+  final PostModel post;
+  final VoidCallback onTap;
+
+  const _ProfilePostGridItem({
+    super.key,
+    required this.post,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ColoredBox(
+        color: const Color(0xFFE9EDF5),
+        child: post.imageUrl.isEmpty
+            ? const Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 26,
+                  color: Color(0xFF9CA3AF),
+                ),
+              )
+            : Image.network(
+                post.imageUrl,
+                cacheWidth: 400,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const ColoredBox(color: Color(0xFFE9EDF5));
+                },
+                errorBuilder: (_, _, _) => const Center(
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 26,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
+              ),
       ),
     );
   }

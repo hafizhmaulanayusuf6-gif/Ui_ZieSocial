@@ -8,7 +8,12 @@ class ApiConstants {
 
   // Authentication
   static String get login => '$baseUrl/auth/login.php';
+  static String get googleLogin => '$baseUrl/auth/google_login.php';
   static String get register => '$baseUrl/auth/register.php';
+
+  // Google Sign-In Web OAuth Client ID (client_type 3 dari google-services.json, bukan secret)
+  static const String googleServerClientId =
+      '291873220440-4ramvj4q7t4o81e0g3npd80oubb7mfb1.apps.googleusercontent.com';
 
   // Posts
   static String get createPost => '$baseUrl/posts/create.php';
@@ -20,6 +25,7 @@ class ApiConstants {
   static String get savePost => '$baseUrl/posts/save.php';
   static String get unsavePost => '$baseUrl/posts/unsave.php';
   static String get savedPosts => '$baseUrl/posts/saved.php';
+  static String get postDetail => '$baseUrl/posts/detail.php';
 
   // Comments
   static String get createComment => '$baseUrl/comments/create.php';
@@ -38,7 +44,10 @@ class ApiConstants {
   static String get chatGetOrCreate => '$baseUrl/chat/get_or_create.php';
   static String get chatMessages => '$baseUrl/chat/messages.php';
   static String get chatSend => '$baseUrl/chat/send.php';
+  static String get chatEdit => '$baseUrl/chat/edit.php';
+  static String get chatDelete => '$baseUrl/chat/delete.php';
   static String get chatAuthChannel => '$baseUrl/chat/auth_channel.php';
+  static String get chatTyping => '$baseUrl/chat/typing.php';
 
   // FCM Device Tokens Endpoints
   static String get deviceRegisterToken => '$baseUrl/device/register_token.php';
